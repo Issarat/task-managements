@@ -178,14 +178,14 @@ Stores task snapshots for change tracking and version history.
 
 Stores project activity for timelines and recent-activity views.
 
-| Column | Type | Key | Nullable | Default | Description |
-| --- | --- | --- | --- | --- | --- |
-| `activity_log_id` | bigint | PK | No | Identity | Unique identifier of the activity log |
-| `project_id` | bigint | FK → `projects.project_id` | No | — | Project associated with the activity |
-| `activity_type` | varchar(50) | — | No | — | Type of activity performed |
-| `content` | nvarchar(max) | — | No | — | Description of the activity |
-| `created_by` | bigint | FK → `users.user_id` | No | — | User who performed the activity |
-| `created_at` | datetime2 | — | No | — | Date and time when the activity occurred |
+| Column            | Type          | Key                        | Nullable | Default  | Description                              |
+| ----------------- | ------------- | -------------------------- | -------- | -------- | ---------------------------------------- |
+| `activity_log_id` | bigint        | PK                         | No       | Identity | Unique identifier of the activity log    |
+| `project_id`      | bigint        | FK → `projects.project_id` | No       | —        | Project associated with the activity     |
+| `activity_type`   | varchar(50)   | —                          | No       | —        | Type of activity performed               |
+| `content`         | nvarchar(max) | —                          | No       | —        | Description of the activity              |
+| `created_by`      | bigint        | FK → `users.user_id`       | No       | —        | User who performed the activity          |
+| `created_at`      | datetime2     | —                          | No       | —        | Date and time when the activity occurred |
 
 ## Indexes and unique constraints
 
