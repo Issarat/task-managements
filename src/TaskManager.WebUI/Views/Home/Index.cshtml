@@ -1,6 +1,6 @@
 @using Microsoft.Extensions.Localization
+@model TaskManager.Application.Models.GuestResponseModel?
 @inject IStringLocalizer<SharedResource> Text
-
 @{
     ViewData["Title"] = Text["PageTitle"];
 }
@@ -31,13 +31,31 @@
             </a>
         </nav>
 
-        <div class="sidebar-note">
-            <span class="sidebar-note__dot" aria-hidden="true"></span>
-            <div>
-                <strong>@Text["PublicDemo"]</strong>
-                <span>@Text["NoRegistration"]</span>
+        @if (Model is not null)
+        {
+            <div class="sidebar-note">
+                <span class="sidebar-note__avatar"
+                      style="@($"background-color: {Model.AvatarColor};")"
+                      aria-hidden="true">
+                    @Model.ShortName
+                </span>
+
+                <div>
+                    <strong>@Model.DisplayName</strong>
+                </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <div class="sidebar-note">
+                <span class="sidebar-note__dot" aria-hidden="true"></span>
+                <div>
+                    <strong>@Text["PublicDemo"]</strong>
+                    <span>@Text["NoRegistration"]</span>
+                </div>
+            </div>
+        }
+
     </aside>
 
     <main class="landing-main">

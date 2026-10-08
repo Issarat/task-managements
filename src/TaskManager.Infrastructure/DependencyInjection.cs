@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TaskManager.Application.Interfaces;
 using TaskManager.Infrastructure.Persistence;
+using TaskManager.Infrastructure.Repositories;
 
 namespace TaskManager.Infrastructure;
 
@@ -20,6 +22,8 @@ public static class DependencyInjection
                 connectionString,
                 sqlOptions => sqlOptions.MigrationsAssembly(
                     typeof(ApplicationDbContext).Assembly.FullName)));
+
+        services.AddScoped<IAnonymousUserRepository, AnonymousUserRepository>();
 
         return services;
     }

@@ -1,0 +1,175 @@
+@model BoardPageViewModel
+@{
+    ViewData["Title"] = Model.Name;
+
+    string FormatDate(DateOnly? value) =>
+        value?.ToString("dd MMM") ?? "—";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/board.css" asp-append-version="true" />
+}
+
+<div class="board-screen" data-board-screen>
+    <button class="board-sidebar-overlay"
+            type="button"
+            data-board-sidebar-close
+            aria-label="ปิดเมนู">
+    </button>
+
+    <aside class="board-sidebar" data-board-sidebar aria-label="เมนู Board">
+        <a class="board-brand" asp-controller="Home" asp-action="Index">
+            <span class="board-brand__mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="m7.5 12 3 3 6-7" /></svg>
+            </span>
+            <strong>TaskFlow</strong>
+        </a>
+
+        <div class="board-sidebar__workspace">
+            <span>WORKSPACE</span>
+            <a class="board-sidebar__link is-active"
+               asp-controller="Boards"
+               asp-action="Index">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="4" width="16" height="16" rx="3" />
+                    <path d="M9 4v16M9 10h11" />
+                </svg>
+                <span>@Model.Name</span>
+                <i aria-hidden="true"></i>
+            </a>
+        </div>
+
+        <button class="board-create-card" type="button">
+            <span aria-hidden="true">+</span>
+            <span>
+                <strong>สร้างบอร์ดใหม่</strong>
+                <small>เริ่มต้นการทำงานร่วมกัน</small>
+            </span>
+        </button>
+
+        <div class="board-sidebar__spacer"></div>
+
+        <div class="board-user">
+            <span class="board-avatar"
+                  style="@($"--avatar-color: {Model.CurrentGuest.AvatarColor};")">
+                @Model.CurrentGuest.ShortName
+            </span>
+            <span>
+                <strong>@Model.CurrentGuest.DisplayName</strong>
+                <small>Guest account</small>
+            </span>
+            <button type="button" aria-label="เมนูผู้ใช้">
+                <i></i><i></i><i></i>
+            </button>
+        </div>
+    </aside>
+
+    <main class="board-workspace">
+        <header class="board-header">
+            <button class="board-mobile-menu"
+                    type="button"
+                    data-board-sidebar-open
+                    aria-label="เปิดเมนู"
+                    aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            </button>
+
+            <div class="board-heading">
+                <div>
+                    <h1>@Model.Name</h1>
+                    <span class="board-live-status"><i></i>พร้อมใช้งาน</span>
+                </div>
+                <p>@Model.Description</p>
+            </div>
+
+            <div class="board-header__actions">
+                <div class="board-members" aria-label="สมาชิกในบอร์ด">
+                    @foreach (var member in Model.Members.Take(4))
+                    {
+                        <span class="board-member-avatar"
+                              style="@($"--avatar-color: {member.Color};")"
+                              title="@member.DisplayName">
+                            @member.ShortName
+                        </span>
+                    }
+                    <span class="board-member-more">+4</span>
+                </div>
+
+                <button class="board-primary-action" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+                    เพิ่มงานใหม่
+                </button>
+            </div>
+        </header>
+
+        <section class="board-content" aria-label="Kanban board">
+            <div class="board-toolbar">
+                <div class="board-tabs" role="tablist" aria-label="มุมมอง Board">
+                    <button class="is-active" type="button" role="tab" aria-selected="true">Board</button>
+                </div>
+
+                <div class="board-tools">
+                    <button class="board-tool board-tool--edit" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3" /></svg>
+                        จัดการบอร์ด
+                    </button>
+                    <button class="board-tool board-tool--invite" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M16 11h6" /></svg>
+                        เชิญสมาชิก
+                    </button>
+                    <button class="board-tool board-tool--danger" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
+                        ลบบอร์ด
+                    </button>
+                </div>
+            </div>
+
+            <div class="kanban-grid">
+                @foreach (var column in Model.Columns)
+                {
+                    <section class="kanban-column tone-@column.Tone" data-column-key="@column.Key">
+                        <header class="kanban-column__header">
+                            <div>
+                                <i aria-hidden="true"></i>
+                                <h2>@column.Name</h2>
+                                <span>@column.Tasks.Count</span>
+                            </div>
+                        </header>
+
+                        <div class="kanban-column__tasks">
+                            @foreach (var task in column.Tasks)
+                            {
+                                <article class="kanban-card">
+                                    <span class="kanban-card__priority priority-@task.PriorityTone">
+                                        @task.Priority
+                                    </span>
+                                    <h3>@task.Title</h3>
+                                    <p>@task.Description</p>
+
+                                    <footer>
+                                        <span class="kanban-card__assignee"
+                                              style="@($"--avatar-color: {task.AssigneeColor};")">
+                                            @task.AssigneeShortName
+                                        </span>
+                                        <span class="kanban-card__date">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
+                                            @FormatDate(task.StartDate)
+                                        </span>
+                                        <span class="kanban-card__date">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 5h11l-2 4 2 4H6" /></svg>
+                                            @FormatDate(task.DueDate)
+                                        </span>
+                                    </footer>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        </section>
+    </main>
+</div>
+
+@section Scripts {
+    <script src="~/js/board.js" asp-append-version="true"></script>
+}

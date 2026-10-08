@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0f1b34" />
     <title>@ViewData["Title"] | TaskFlow</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     @RenderBody()

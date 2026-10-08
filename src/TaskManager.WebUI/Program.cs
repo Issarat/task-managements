@@ -1,4 +1,7 @@
+using TaskManager.Application.Interfaces;
+using TaskManager.Application.Services;
 using TaskManager.Infrastructure;
+using TaskManager.WebUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +10,9 @@ builder.Services.AddLocalization(options => options.ResourcesPath = "Resources")
 builder.Services.AddControllersWithViews()
     .AddViewLocalization()
     .AddDataAnnotationsLocalization();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<GuestCookieService>();
+builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
