@@ -1,0 +1,41 @@
+# Visual Studio user state and caches
+.vs/
+**/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+
+# IDE and editor settings
+.idea/
+.vscode/
+
+# Local Obsidian workspace
+.obsidian/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+secrets.json
+
+# Local databases and logs
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+

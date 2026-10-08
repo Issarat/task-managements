@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/TaskManager.Application/TaskManager.Application.csproj" />
+  <Project Path="src/TaskManager.Domain/TaskManager.Domain.csproj" />
+  <Project Path="src/TaskManager.Infrastructure/TaskManager.Infrastructure.csproj" />
+  <Project Path="src/TaskManager.WebUI/TaskManager.WebUI.csproj" />
+</Solution>
