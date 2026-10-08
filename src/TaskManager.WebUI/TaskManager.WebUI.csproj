@@ -25,7 +25,7 @@
   <ItemGroup>
     <Folder Include="Hubs\" />
     <Folder Include="Extensions\" />
-    <Folder Include="Resource\" />
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

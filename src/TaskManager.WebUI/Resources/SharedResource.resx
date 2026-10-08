@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="PageTitle" xml:space="preserve"><value>ทดลองจัดการงาน</value></data>
+  <data name="MainNavigationLabel" xml:space="preserve"><value>เมนูหลัก</value></data>
+  <data name="HomeLinkLabel" xml:space="preserve"><value>TaskFlow หน้าหลัก</value></data>
+  <data name="WorkspaceLabel" xml:space="preserve"><value>WORKSPACE</value></data>
+  <data name="CreateBoard" xml:space="preserve"><value>สร้างบอร์ดใหม่</value></data>
+  <data name="CreateBoardDescription" xml:space="preserve"><value>เริ่มจัดการงานของคุณ</value></data>
+  <data name="PublicDemo" xml:space="preserve"><value>Public demo</value></data>
+  <data name="NoRegistration" xml:space="preserve"><value>ไม่ต้องสมัครสมาชิก</value></data>
+  <data name="DemoTitle" xml:space="preserve"><value>DEMO</value></data>
+  <data name="DemoSubtitle" xml:space="preserve"><value>ทดลองวางแผนงานร่วมกันแบบเรียลไทม์</value></data>
+  <data name="ReadyToTry" xml:space="preserve"><value>พร้อมทดลองใช้งาน</value></data>
+  <data name="PublicDemoArea" xml:space="preserve"><value>พื้นที่ทดลองแบบสาธารณะ</value></data>
+  <data name="HeroTitleLine1" xml:space="preserve"><value>จัดงานให้ชัด</value></data>
+  <data name="HeroTitleLine2" xml:space="preserve"><value>ทำงานร่วมกันได้ทันที</value></data>
+  <data name="HeroDescriptionLine1" xml:space="preserve"><value>ทดลองสร้าง ย้าย และแก้ไข Task บน Kanban board</value></data>
+  <data name="HeroDescriptionLine2" xml:space="preserve"><value>โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value></data>
+  <data name="FeatureListLabel" xml:space="preserve"><value>คุณสมบัติเด่น</value></data>
+  <data name="FeatureStartImmediately" xml:space="preserve"><value>เริ่มได้ทันที</value></data>
+  <data name="FeatureShareLink" xml:space="preserve"><value>แชร์ลิงก์ร่วมงาน</value></data>
+  <data name="FeatureTemporaryUsage" xml:space="preserve"><value>ใช้งานได้ 24 ชม.</value></data>
+  <data name="StartTrial" xml:space="preserve"><value>เริ่มทดลองใช้งาน</value></data>
+  <data name="TrialNote" xml:space="preserve"><value>ระบบจะสร้างบอร์ดตัวอย่างและชื่อผู้ใช้แบบสุ่มให้คุณ</value></data>
+  <data name="DisclaimerLabel" xml:space="preserve"><value>ข้อควรทราบก่อนทดลองใช้งาน</value></data>
+  <data name="DisclaimerTitle" xml:space="preserve"><value>เว็บไซต์นี้เป็นผลงาน Portfolio / Resume</value></data>
+  <data name="DisclaimerBody" xml:space="preserve"><value>ข้อมูลบนบอร์ดเป็นข้อมูลชั่วคราวและอาจถูกลบเมื่อครบ 24 ชั่วโมงหรือมีการรีเซ็ตระบบ กรุณาอย่าใส่ข้อมูลส่วนตัวหรือข้อมูลสำคัญ</value></data>
+  <data name="GitHubLinkText" xml:space="preserve"><value>ดู Source code บน GitHub</value></data>
+  <data name="GitHubLinkLabel" xml:space="preserve"><value>ดู Source code ของ TaskFlow บน GitHub (เปิดแท็บใหม่)</value></data>
+</root>
