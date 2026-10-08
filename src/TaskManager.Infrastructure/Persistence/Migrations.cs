@@ -4,7 +4,7 @@ using System.Text;
 
 namespace TaskManager.Infrastructure.Persistence
 {
-    internal class Migrations
+    internal static class MigrationMarker
     {
     }
 }
