@@ -88,12 +88,20 @@
                     </span>
                 </div>
 
-                <button id="demo-btn" class="primary-cta" type="button" aria-describedby="trial-note">
-                    <span>@Text["StartTrial"]</span>
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M5 12h14M13 6l6 6-6 6" />
-                    </svg>
-                </button>
+                <form class="trial-form"
+                      asp-controller="Home"
+                      asp-action="TryDemo"
+                      method="post">
+                    <button id="demo-btn"
+                            class="primary-cta"
+                            type="submit"
+                            aria-describedby="trial-note">
+                        <span>@Text["StartTrial"]</span>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
+                    </button>
+                </form>
                 <p class="trial-note" id="trial-note">@Text["TrialNote"]</p>
 
                 <aside class="demo-disclaimer" aria-label="@Text["DisclaimerLabel"]">
@@ -169,3 +177,4 @@
         </section>
     </main>
 </div>
+

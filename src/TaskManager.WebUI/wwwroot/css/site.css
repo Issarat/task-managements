@@ -410,6 +410,10 @@ svg {
   transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
 
+.trial-form {
+  margin: 0;
+}
+
 .primary-cta:hover {
   box-shadow: 0 16px 34px rgba(36, 91, 224, 0.32);
   filter: brightness(1.04);
