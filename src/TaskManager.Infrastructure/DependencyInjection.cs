@@ -24,6 +24,7 @@ public static class DependencyInjection
                     typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IAnonymousUserRepository, AnonymousUserRepository>();
+        services.AddScoped<IBoardRepository, BoardRepository>();
 
         return services;
     }

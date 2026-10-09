@@ -85,4 +85,37 @@
   <data name="DisclaimerBody" xml:space="preserve"><value>ข้อมูลบนบอร์ดเป็นข้อมูลชั่วคราวและอาจถูกลบเมื่อครบ 24 ชั่วโมงหรือมีการรีเซ็ตระบบ กรุณาอย่าใส่ข้อมูลส่วนตัวหรือข้อมูลสำคัญ</value></data>
   <data name="GitHubLinkText" xml:space="preserve"><value>ดู Source code บน GitHub</value></data>
   <data name="GitHubLinkLabel" xml:space="preserve"><value>ดู Source code ของ TaskFlow บน GitHub (เปิดแท็บใหม่)</value></data>
+  <data name="AppName" xml:space="preserve"><value>TaskFlow</value></data>
+  <data name="BoardCloseMenu" xml:space="preserve"><value>ปิดเมนู</value></data>
+  <data name="BoardNavigationLabel" xml:space="preserve"><value>เมนู Board</value></data>
+  <data name="BoardCreateDescription" xml:space="preserve"><value>เริ่มต้นการทำงานร่วมกัน</value></data>
+  <data name="BoardGuestAccount" xml:space="preserve"><value>Guest account</value></data>
+  <data name="BoardUserMenu" xml:space="preserve"><value>เมนูผู้ใช้</value></data>
+  <data name="BoardOpenMenu" xml:space="preserve"><value>เปิดเมนู</value></data>
+  <data name="BoardReady" xml:space="preserve"><value>พร้อมใช้งาน</value></data>
+  <data name="BoardMembersLabel" xml:space="preserve"><value>สมาชิกในบอร์ด</value></data>
+  <data name="BoardAddTask" xml:space="preserve"><value>เพิ่มงานใหม่</value></data>
+  <data name="BoardKanbanLabel" xml:space="preserve"><value>Kanban board</value></data>
+  <data name="BoardViewLabel" xml:space="preserve"><value>มุมมอง Board</value></data>
+  <data name="BoardTab" xml:space="preserve"><value>Board</value></data>
+  <data name="BoardEditHint" xml:space="preserve"><value>แก้ไขชื่อและคำอธิบายบอร์ด</value></data>
+  <data name="BoardOwnerOnlyHint" xml:space="preserve"><value>เฉพาะผู้สร้างบอร์ดเท่านั้นที่แก้ไขได้</value></data>
+  <data name="BoardManage" xml:space="preserve"><value>จัดการบอร์ด</value></data>
+  <data name="BoardLoadSample" xml:space="preserve"><value>โหลดข้อมูลตัวอย่าง</value></data>
+  <data name="BoardReset" xml:space="preserve"><value>รีเซ็ตบอร์ด</value></data>
+  <data name="BoardCreateDialogDescription" xml:space="preserve"><value>ตั้งชื่อพื้นที่ทำงานสำหรับทีมของคุณ</value></data>
+  <data name="BoardCloseDialog" xml:space="preserve"><value>ปิดหน้าต่าง</value></data>
+  <data name="BoardNameLabel" xml:space="preserve"><value>ชื่อบอร์ด</value></data>
+  <data name="BoardNamePlaceholder" xml:space="preserve"><value>เช่น Product Launch Q4</value></data>
+  <data name="BoardDescriptionLabel" xml:space="preserve"><value>คำอธิบาย</value></data>
+  <data name="BoardDescriptionPlaceholder" xml:space="preserve"><value>อธิบายเป้าหมายของบอร์ดนี้</value></data>
+  <data name="BoardCancel" xml:space="preserve"><value>ยกเลิก</value></data>
+  <data name="BoardCreateSubmit" xml:space="preserve"><value>สร้างบอร์ด</value></data>
+  <data name="BoardUpdateDialogDescription" xml:space="preserve"><value>แก้ไขชื่อและคำอธิบายของบอร์ด</value></data>
+  <data name="BoardSave" xml:space="preserve"><value>บันทึก</value></data>
+  <data name="BoardEmptyValue" xml:space="preserve"><value>—</value></data>
+  <data name="BoardPriorityLow" xml:space="preserve"><value>ต่ำ</value></data>
+  <data name="BoardPriorityMedium" xml:space="preserve"><value>ปานกลาง</value></data>
+  <data name="BoardPriorityHigh" xml:space="preserve"><value>สูง</value></data>
+  <data name="BoardDefaultName" xml:space="preserve"><value>บอร์ดใหม่</value></data>
 </root>

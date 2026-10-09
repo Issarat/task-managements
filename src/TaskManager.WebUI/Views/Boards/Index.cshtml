@@ -1,9 +1,11 @@
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> Text
 @model BoardPageViewModel
 @{
     ViewData["Title"] = Model.Name;
 
     string FormatDate(DateOnly? value) =>
-        value?.ToString("dd MMM") ?? "—";
+        value?.ToString("dd MMM") ?? Text["BoardEmptyValue"].Value;
 }
 
 @section Styles {
@@ -14,36 +16,43 @@
     <button class="board-sidebar-overlay"
             type="button"
             data-board-sidebar-close
-            aria-label="ปิดเมนู">
+            aria-label="@Text["BoardCloseMenu"]">
     </button>
 
-    <aside class="board-sidebar" data-board-sidebar aria-label="เมนู Board">
+    <aside class="board-sidebar" data-board-sidebar aria-label="@Text["BoardNavigationLabel"]">
         <a class="board-brand" asp-controller="Home" asp-action="Index">
             <span class="board-brand__mark" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="m7.5 12 3 3 6-7" /></svg>
             </span>
-            <strong>TaskFlow</strong>
+            <strong>@Text["AppName"]</strong>
         </a>
 
         <div class="board-sidebar__workspace">
-            <span>WORKSPACE</span>
-            <a class="board-sidebar__link is-active"
-               asp-controller="Boards"
-               asp-action="Index">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <rect x="4" y="4" width="16" height="16" rx="3" />
-                    <path d="M9 4v16M9 10h11" />
-                </svg>
-                <span>@Model.Name</span>
-                <i aria-hidden="true"></i>
-            </a>
+            <span>@Text["WorkspaceLabel"]</span>
+            @foreach (var board in Model.NavigationBoards)
+            {
+                <a class="board-sidebar__link @(board.IsActive ? "is-active" : null)"
+                   asp-controller="Boards"
+                   asp-action="Index"
+                   asp-route-publicId="@board.PublicId"
+                   aria-current="@(board.IsActive ? "page" : null)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="4" y="4" width="16" height="16" rx="3" />
+                        <path d="M9 4v16M9 10h11" />
+                    </svg>
+                    <span>@board.Name</span>
+                    <i aria-hidden="true"></i>
+                </a>
+            }
         </div>
 
-        <button class="board-create-card" type="button">
+        <button class="board-create-card"
+                type="button"
+                data-dialog-open="create-board-dialog">
             <span aria-hidden="true">+</span>
             <span>
-                <strong>สร้างบอร์ดใหม่</strong>
-                <small>เริ่มต้นการทำงานร่วมกัน</small>
+                <strong>@Text["CreateBoard"]</strong>
+                <small>@Text["BoardCreateDescription"]</small>
             </span>
         </button>
 
@@ -56,9 +65,9 @@
             </span>
             <span>
                 <strong>@Model.CurrentGuest.DisplayName</strong>
-                <small>Guest account</small>
+                <small>@Text["BoardGuestAccount"]</small>
             </span>
-            <button type="button" aria-label="เมนูผู้ใช้">
+            <button type="button" aria-label="@Text["BoardUserMenu"]">
                 <i></i><i></i><i></i>
             </button>
         </div>
@@ -69,7 +78,7 @@
             <button class="board-mobile-menu"
                     type="button"
                     data-board-sidebar-open
-                    aria-label="เปิดเมนู"
+                    aria-label="@Text["BoardOpenMenu"]"
                     aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
             </button>
@@ -77,13 +86,13 @@
             <div class="board-heading">
                 <div>
                     <h1>@Model.Name</h1>
-                    <span class="board-live-status"><i></i>พร้อมใช้งาน</span>
+                    <span class="board-live-status"><i></i>@Text["BoardReady"]</span>
                 </div>
                 <p>@Model.Description</p>
             </div>
 
             <div class="board-header__actions">
-                <div class="board-members" aria-label="สมาชิกในบอร์ด">
+                <div class="board-members" aria-label="@Text["BoardMembersLabel"]">
                     @foreach (var member in Model.Members.Take(4))
                     {
                         <span class="board-member-avatar"
@@ -92,34 +101,49 @@
                             @member.ShortName
                         </span>
                     }
-                    <span class="board-member-more">+4</span>
+                    @if (Model.Members.Count > 4)
+                    {
+                        <span class="board-member-more">+@(Model.Members.Count - 4)</span>
+                    }
                 </div>
 
                 <button class="board-primary-action" type="button">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-                    เพิ่มงานใหม่
+                    @Text["BoardAddTask"]
                 </button>
             </div>
         </header>
 
-        <section class="board-content" aria-label="Kanban board">
+        <section class="board-content" aria-label="@Text["BoardKanbanLabel"]">
             <div class="board-toolbar">
-                <div class="board-tabs" role="tablist" aria-label="มุมมอง Board">
-                    <button class="is-active" type="button" role="tab" aria-selected="true">Board</button>
+                <div class="board-tabs" role="tablist" aria-label="@Text["BoardViewLabel"]">
+                    <button class="is-active" type="button" role="tab" aria-selected="true">@Text["BoardTab"]</button>
                 </div>
 
                 <div class="board-tools">
-                    <button class="board-tool board-tool--edit" type="button">
+                    <button class="board-tool board-tool--edit"
+                            type="button"
+                            data-dialog-open="update-board-dialog"
+                            disabled="@(!Model.CanManage ? "disabled" : null)"
+                            title="@(Model.CanManage ? Text["BoardEditHint"] : Text["BoardOwnerOnlyHint"])">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3" /></svg>
-                        จัดการบอร์ด
+                        @Text["BoardManage"]
                     </button>
-                    <button class="board-tool board-tool--invite" type="button">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM19 8v6M16 11h6" /></svg>
-                        เชิญสมาชิก
+                    <button class="board-tool board-tool--sample" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="4" width="13" height="13" rx="2" />
+                            <path d="M7 8h5M7 11h3" />
+                            <rect x="13" y="12" width="8" height="8" rx="2" />
+                            <path d="M17 14.5v3M15.5 16h3" />
+                        </svg>
+                        @Text["BoardLoadSample"]
                     </button>
-                    <button class="board-tool board-tool--danger" type="button">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
-                        ลบบอร์ด
+                    <button class="board-tool board-tool--reset" type="button">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 7v5h-5" />
+                            <path d="M19 12a7.5 7.5 0 1 1-2.2-5.3L20 9" />
+                        </svg>
+                        @Text["BoardReset"]
                     </button>
                 </div>
             </div>
@@ -169,6 +193,100 @@
         </section>
     </main>
 </div>
+
+<dialog class="board-dialog" id="create-board-dialog">
+    <form class="board-dialog__form"
+          asp-controller="Boards"
+          asp-action="Create"
+          method="post">
+        <header class="board-dialog__header">
+            <div>
+                <h2>@Text["CreateBoard"]</h2>
+                <p>@Text["BoardCreateDialogDescription"]</p>
+            </div>
+            <button type="button"
+                    class="board-dialog__close"
+                    data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+
+        <div class="board-dialog__content">
+            <label class="board-dialog__field">
+                <span>@Text["BoardNameLabel"] <i>*</i></span>
+                <input name="name"
+                       type="text"
+                       maxlength="120"
+                       required
+                       autocomplete="off"
+                       placeholder="@Text["BoardNamePlaceholder"]"
+                       data-dialog-initial-focus />
+            </label>
+
+            <label class="board-dialog__field">
+                <span>@Text["BoardDescriptionLabel"]</span>
+                <textarea name="description"
+                          maxlength="500"
+                          rows="3"
+                          placeholder="@Text["BoardDescriptionPlaceholder"]"></textarea>
+            </label>
+        </div>
+
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button"
+                    data-dialog-close>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--primary"
+                    type="submit">@Text["BoardCreateSubmit"]</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="board-dialog" id="update-board-dialog">
+    <form class="board-dialog__form"
+          asp-controller="Boards"
+          asp-action="Update"
+          asp-route-publicId="@Model.PublicId"
+          method="post">
+        <header class="board-dialog__header">
+            <div>
+                <h2>@Text["BoardManage"]</h2>
+                <p>@Text["BoardUpdateDialogDescription"]</p>
+            </div>
+            <button type="button"
+                    class="board-dialog__close"
+                    data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+
+        <div class="board-dialog__content">
+            <label class="board-dialog__field">
+                <span>@Text["BoardNameLabel"] <i>*</i></span>
+                <input name="name"
+                       type="text"
+                       value="@Model.Name"
+                       maxlength="120"
+                       required
+                       autocomplete="off"
+                       data-dialog-initial-focus />
+            </label>
+
+            <label class="board-dialog__field">
+                <span>@Text["BoardDescriptionLabel"]</span>
+                <textarea name="description"
+                          maxlength="500"
+                          rows="3">@Model.Description</textarea>
+            </label>
+        </div>
+
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button"
+                    data-dialog-close>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--primary"
+                    type="submit">@Text["BoardSave"]</button>
+        </footer>
+    </form>
+</dialog>
 
 @section Scripts {
     <script src="~/js/board.js" asp-append-version="true"></script>

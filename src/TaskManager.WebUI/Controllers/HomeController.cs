@@ -11,16 +11,22 @@ namespace TaskManager.WebUI.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly GuestCookieService _guestCookieService;
+        private readonly BoardOwnerCookieService _boardOwnerCookieService;
         private readonly IGuestService _guestService;
+        private readonly IBoardService _boardService;
 
         public HomeController(
             ILogger<HomeController> logger,
             GuestCookieService guestCookieService,
-            IGuestService guestService)
+            BoardOwnerCookieService boardOwnerCookieService,
+            IGuestService guestService,
+            IBoardService boardService)
         {
             _logger = logger;
             _guestCookieService = guestCookieService;
+            _boardOwnerCookieService = boardOwnerCookieService;
             _guestService = guestService;
+            _boardService = boardService;
         }
         [HttpGet]
         public async Task<IActionResult> Index(
@@ -33,7 +39,7 @@ namespace TaskManager.WebUI.Controllers
                 if (string.IsNullOrWhiteSpace(guestToken))
                 {
                     ViewBag.HasGuestCookie = false;
-                    return View();
+                    return View(new HomePageViewModel(null, []));
                 }
 
                 var guest = await _guestService.GetGuestByTokenAsync(
@@ -45,11 +51,15 @@ namespace TaskManager.WebUI.Controllers
                     _guestCookieService.DeleteToken();
 
                     ViewBag.HasGuestCookie = false;
-                    return View(model: null);
+                    return View(new HomePageViewModel(null, []));
                 }
 
+                var boards = await _boardService.GetListBySessionIdAsync(
+                    guest.Id,
+                    cancellationToken);
+
                 ViewBag.HasGuestCookie = true;
-                return View(guest);
+                return View(new HomePageViewModel(guest, boards));
             }
             catch (Exception ex)
             {
@@ -88,7 +98,36 @@ namespace TaskManager.WebUI.Controllers
                     guest = createdGuest.Guest;
                 }
 
-                return RedirectToAction("Index", "Boards");
+                var boards = await _boardService.GetListBySessionIdAsync(
+                    guest.Id,
+                    cancellationToken);
+
+                if (boards.Count > 0)
+                {
+                    return RedirectToAction(
+                        "Index",
+                        "Boards",
+                        new { publicId = boards[0].PublicId });
+                }
+
+                var createdBoard = await _boardService.CreateAsync(
+                    new CreateBoardRequestModel(
+                        guest.Id,
+                        "Website Launch",
+                        "วางแผนเปิดตัวเว็บไซต์",
+                        guest.ExpiresAtUtc,
+                        IncludeSampleData: true),
+                    cancellationToken);
+
+                _boardOwnerCookieService.SetToken(
+                    createdBoard.Board.PublicId,
+                    createdBoard.OwnerToken,
+                    createdBoard.Board.ExpiresAtUtc);
+
+                return RedirectToAction(
+                    "Index",
+                    "Boards",
+                    new { publicId = createdBoard.Board.PublicId });
             }
             catch (Exception ex)
             {

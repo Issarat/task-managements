@@ -12,7 +12,9 @@ builder.Services.AddControllersWithViews()
     .AddDataAnnotationsLocalization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GuestCookieService>();
+builder.Services.AddScoped<BoardOwnerCookieService>();
 builder.Services.AddScoped<IGuestService, GuestService>();
+builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();

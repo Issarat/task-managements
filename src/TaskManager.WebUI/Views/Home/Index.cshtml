@@ -1,5 +1,5 @@
 @using Microsoft.Extensions.Localization
-@model TaskManager.Application.Models.GuestResponseModel?
+@model HomePageViewModel
 @inject IStringLocalizer<SharedResource> Text
 @{
     ViewData["Title"] = Text["PageTitle"];
@@ -18,30 +18,75 @@
 
         <nav class="sidebar-nav">
             <span class="sidebar-nav__label">@Text["WorkspaceLabel"]</span>
-            <a class="sidebar-action" href="#start-trial">
-                <span class="sidebar-action__icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" role="img">
-                        <path d="M12 5v14M5 12h14" />
-                    </svg>
-                </span>
-                <span>
-                    <strong>@Text["CreateBoard"]</strong>
-                    <small>@Text["CreateBoardDescription"]</small>
-                </span>
-            </a>
+
+            @if (Model.Boards.Count > 0)
+            {
+                <div class="sidebar-board-list" aria-label="บอร์ดของคุณ">
+                    @foreach (var board in Model.Boards)
+                    {
+                        <a class="sidebar-board-link"
+                           asp-controller="Boards"
+                           asp-action="Index"
+                           asp-route-publicId="@board.PublicId"
+                           title="@board.Name">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="4" y="4" width="16" height="16" rx="3" />
+                                <path d="M9 4v16M9 10h11" />
+                            </svg>
+                            <span>@board.Name</span>
+                            <i aria-hidden="true"></i>
+                        </a>
+                    }
+                </div>
+            }
+
+            @if (Model.Guest is not null)
+            {
+                <form class="sidebar-action-form"
+                      asp-controller="Boards"
+                      asp-action="Create"
+                      method="post">
+                    <input type="hidden" name="name" value="บอร์ดใหม่" />
+                    <button class="sidebar-action" type="submit">
+                        <span class="sidebar-action__icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" role="img">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </span>
+                        <span>
+                            <strong>@Text["CreateBoard"]</strong>
+                            <small>@Text["CreateBoardDescription"]</small>
+                        </span>
+                    </button>
+                </form>
+            }
+            else
+            {
+                <a class="sidebar-action" href="#start-trial">
+                    <span class="sidebar-action__icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img">
+                            <path d="M12 5v14M5 12h14" />
+                        </svg>
+                    </span>
+                    <span>
+                        <strong>@Text["CreateBoard"]</strong>
+                        <small>@Text["CreateBoardDescription"]</small>
+                    </span>
+                </a>
+            }
         </nav>
 
-        @if (Model is not null)
+        @if (Model.Guest is not null)
         {
             <div class="sidebar-note">
                 <span class="sidebar-note__avatar"
-                      style="@($"background-color: {Model.AvatarColor};")"
+                      style="@($"background-color: {Model.Guest.AvatarColor};")"
                       aria-hidden="true">
-                    @Model.ShortName
+                    @Model.Guest.ShortName
                 </span>
 
                 <div>
-                    <strong>@Model.DisplayName</strong>
+                    <strong>@Model.Guest.DisplayName</strong>
                 </div>
             </div>
         }
