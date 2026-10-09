@@ -118,4 +118,7 @@
   <data name="BoardPriorityMedium" xml:space="preserve"><value>ปานกลาง</value></data>
   <data name="BoardPriorityHigh" xml:space="preserve"><value>สูง</value></data>
   <data name="BoardDefaultName" xml:space="preserve"><value>บอร์ดใหม่</value></data>
+  <data name="BoardResetHint" xml:space="preserve"><value>ลบงานทั้งหมดและกลับเป็นบอร์ดเปล่า</value></data>
+  <data name="BoardResetConfirmation" xml:space="preserve"><value>ต้องการลบงานทั้งหมดในบอร์ด “{0}” ใช่ไหม? คอลัมน์และสมาชิกจะยังอยู่ การลบนี้ไม่สามารถย้อนกลับได้</value></data>
+  <data name="BoardResetConfirm" xml:space="preserve"><value>ยืนยันรีเซ็ตบอร์ด</value></data>
 </root>

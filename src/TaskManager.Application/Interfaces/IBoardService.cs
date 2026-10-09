@@ -4,6 +4,11 @@ namespace TaskManager.Application.Interfaces;
 
 public interface IBoardService
 {
+    Task<bool> ResetAsync(
+        string publicId,
+        string ownerToken,
+        CancellationToken cancellationToken = default);
+
     Task<CreatedBoardModel> CreateAsync(
         CreateBoardRequestModel request,
         CancellationToken cancellationToken = default);

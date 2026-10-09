@@ -9,6 +9,23 @@ namespace TaskManager.Infrastructure.Repositories;
 internal sealed class BoardRepository(ApplicationDbContext dbContext)
     : IBoardRepository
 {
+    public async Task ResetTasksAsync(
+        Board board,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+
+        await using var transaction = await dbContext.Database
+            .BeginTransactionAsync(cancellationToken);
+
+        await dbContext.TaskItems
+            .Where(task => task.BoardId == board.Id)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         Board board,
         CancellationToken cancellationToken = default)

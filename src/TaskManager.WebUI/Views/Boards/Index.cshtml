@@ -138,7 +138,11 @@
                         </svg>
                         @Text["BoardLoadSample"]
                     </button>
-                    <button class="board-tool board-tool--reset" type="button">
+                    <button class="board-tool board-tool--reset"
+                            type="button"
+                            data-dialog-open="reset-board-dialog"
+                            disabled="@(!Model.CanManage ? "disabled" : null)"
+                            title="@(Model.CanManage ? Text["BoardResetHint"] : Text["BoardOwnerOnlyHint"])">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M20 7v5h-5" />
                             <path d="M19 12a7.5 7.5 0 1 1-2.2-5.3L20 9" />
@@ -284,6 +288,34 @@
                     data-dialog-close>@Text["BoardCancel"]</button>
             <button class="board-dialog__button board-dialog__button--primary"
                     type="submit">@Text["BoardSave"]</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="board-dialog" id="reset-board-dialog"
+        aria-labelledby="reset-board-title"
+        aria-describedby="reset-board-description">
+    <form class="board-dialog__form"
+          asp-controller="Boards"
+          asp-action="Reset"
+          asp-route-publicId="@Model.PublicId"
+          method="post">
+        <header class="board-dialog__header">
+            <h2 id="reset-board-title">@Text["BoardReset"]</h2>
+            <button type="button"
+                    class="board-dialog__close"
+                    data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+        <div class="board-dialog__content">
+            <p id="reset-board-description">@Text["BoardResetConfirmation", Model.Name]</p>
+        </div>
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button" autofocus
+                    data-dialog-close>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--danger"
+                    type="submit">@Text["BoardResetConfirm"]</button>
         </footer>
     </form>
 </dialog>

@@ -128,6 +128,39 @@ public sealed class BoardsController(
         }
     }
 
+    [HttpPost("/boards/{publicId}/reset")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reset(
+        string publicId,
+        CancellationToken cancellationToken)
+    {
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+        {
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
+        var ownerToken = boardOwnerCookieService.GetToken(publicId);
+        if (string.IsNullOrWhiteSpace(ownerToken))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        try
+        {
+            var reset = await boardService.ResetAsync(
+                publicId, ownerToken, cancellationToken);
+
+            return reset
+                ? RedirectToAction(nameof(Index), new { publicId })
+                : NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+    }
+
     private async Task<GuestResponseModel?> GetCurrentGuestAsync(
         CancellationToken cancellationToken)
     {

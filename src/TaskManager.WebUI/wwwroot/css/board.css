@@ -732,6 +732,21 @@
   background: #255fd0;
 }
 
+.board-dialog__button--danger {
+  color: #fff;
+  border: 1px solid #ef4444;
+  background: #ef4444;
+}
+
+.board-dialog__button--danger:hover {
+  background: #dc2626;
+}
+
+.board-dialog__content > p {
+  margin: 0;
+  line-height: 1.7;
+}
+
 .kanban-card__date svg {
   width: 11px;
   height: 11px;

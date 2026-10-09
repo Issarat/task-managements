@@ -12,6 +12,35 @@ public sealed class BoardService(IBoardRepository boardRepository)
     private const int MaximumNameLength = 120;
     private const int MaximumDescriptionLength = 500;
 
+    public async Task<bool> ResetAsync(
+        string publicId,
+        string ownerToken,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerToken);
+
+        var board = await boardRepository.GetByPublicIdForUpdateAsync(
+            publicId, cancellationToken);
+        var now = DateTime.UtcNow;
+
+        if (board is null || board.IsExpired(now))
+        {
+            return false;
+        }
+
+        if (!HasMatchingOwnerToken(board.OwnerTokenHash, ownerToken))
+        {
+            throw new UnauthorizedAccessException(
+                "Only the board owner can reset this board.");
+        }
+
+        board.UpdatedAtUtc = now;
+        board.MarkActivity(now);
+        await boardRepository.ResetTasksAsync(board, cancellationToken);
+        return true;
+    }
+
     public async Task<CreatedBoardModel> CreateAsync(
         CreateBoardRequestModel request,
         CancellationToken cancellationToken = default)
