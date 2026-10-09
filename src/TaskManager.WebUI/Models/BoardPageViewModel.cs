@@ -34,6 +34,7 @@ public sealed record BoardTaskCardViewModel(
     string Priority,
     string PriorityTone,
     string AssigneeShortName,
+    string AssigneeDisplayName,
     string AssigneeColor,
     DateOnly? StartDate,
     DateOnly? DueDate);

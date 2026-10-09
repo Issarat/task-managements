@@ -4,6 +4,7 @@ namespace TaskManager.Application.Interfaces;
 
 public interface IBoardRepository
 {
+
     Task ResetTasksAsync(
         Board board,
         CancellationToken cancellationToken = default);

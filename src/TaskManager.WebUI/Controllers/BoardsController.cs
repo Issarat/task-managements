@@ -161,6 +161,7 @@ public sealed class BoardsController(
         }
     }
 
+
     private async Task<GuestResponseModel?> GetCurrentGuestAsync(
         CancellationToken cancellationToken)
     {
@@ -251,6 +252,7 @@ public sealed class BoardsController(
             assignee is null
                 ? text["BoardEmptyValue"].Value
                 : AvatarExtension.CreateShortName(assignee.DisplayName),
+            assignee?.DisplayName ?? text["BoardUnassigned"].Value,
             assignee?.AvatarColor ?? "#94a3b8",
             task.StartDate,
             task.DueDate);

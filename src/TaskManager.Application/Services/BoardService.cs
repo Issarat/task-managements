@@ -12,6 +12,7 @@ public sealed class BoardService(IBoardRepository boardRepository)
     private const int MaximumNameLength = 120;
     private const int MaximumDescriptionLength = 500;
 
+
     public async Task<bool> ResetAsync(
         string publicId,
         string ownerToken,

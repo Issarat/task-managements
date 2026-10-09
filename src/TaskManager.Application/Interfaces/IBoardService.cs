@@ -4,6 +4,7 @@ namespace TaskManager.Application.Interfaces;
 
 public interface IBoardService
 {
+
     Task<bool> ResetAsync(
         string publicId,
         string ownerToken,

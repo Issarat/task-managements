@@ -9,6 +9,7 @@ namespace TaskManager.Infrastructure.Repositories;
 internal sealed class BoardRepository(ApplicationDbContext dbContext)
     : IBoardRepository
 {
+
     public async Task ResetTasksAsync(
         Board board,
         CancellationToken cancellationToken = default)
@@ -60,7 +61,11 @@ internal sealed class BoardRepository(ApplicationDbContext dbContext)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(publicId);
 
-        return dbContext.Boards.SingleOrDefaultAsync(
+        return dbContext.Boards
+            .Include(board => board.Columns)
+            .Include(board => board.Participants)
+            .AsSplitQuery()
+            .SingleOrDefaultAsync(
             board => board.PublicId == publicId,
             cancellationToken);
     }

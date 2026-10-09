@@ -129,15 +129,6 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3" /></svg>
                         @Text["BoardManage"]
                     </button>
-                    <button class="board-tool board-tool--sample" type="button">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <rect x="3" y="4" width="13" height="13" rx="2" />
-                            <path d="M7 8h5M7 11h3" />
-                            <rect x="13" y="12" width="8" height="8" rx="2" />
-                            <path d="M17 14.5v3M15.5 16h3" />
-                        </svg>
-                        @Text["BoardLoadSample"]
-                    </button>
                     <button class="board-tool board-tool--reset"
                             type="button"
                             data-dialog-open="reset-board-dialog"
@@ -151,6 +142,7 @@
                     </button>
                 </div>
             </div>
+
 
             <div class="kanban-grid">
                 @foreach (var column in Model.Columns)
@@ -168,25 +160,31 @@
                             @foreach (var task in column.Tasks)
                             {
                                 <article class="kanban-card">
-                                    <span class="kanban-card__priority priority-@task.PriorityTone">
-                                        @task.Priority
-                                    </span>
                                     <h3>@task.Title</h3>
                                     <p>@task.Description</p>
+                                    <span class="kanban-card__priority priority-@task.PriorityTone">
+                                        <i aria-hidden="true"></i>
+                                        @task.Priority
+                                    </span>
 
                                     <footer>
-                                        <span class="kanban-card__assignee"
-                                              style="@($"--avatar-color: {task.AssigneeColor};")">
-                                            @task.AssigneeShortName
-                                        </span>
-                                        <span class="kanban-card__date">
+                                        <div class="kanban-card__person" title="@task.AssigneeDisplayName">
+                                            <span class="kanban-card__assignee"
+                                                  style="@($"--avatar-color: {task.AssigneeColor};")">
+                                                @task.AssigneeShortName
+                                            </span>
+                                            <span class="kanban-card__person-name">@task.AssigneeDisplayName</span>
+                                        </div>
+                                        <div class="kanban-card__dates">
+                                        <span class="kanban-card__date" title="@Text["BoardStartDate"]">
                                             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
                                             @FormatDate(task.StartDate)
                                         </span>
-                                        <span class="kanban-card__date">
-                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v18M6 5h11l-2 4 2 4H6" /></svg>
+                                        <span class="kanban-card__date" title="@Text["BoardDueDate"]">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12V5H4v16h9M8 3v4M15 3v4M4 10h15m-5 9 3 3 5-6" /></svg>
                                             @FormatDate(task.DueDate)
                                         </span>
+                                        </div>
                                     </footer>
                                 </article>
                             }

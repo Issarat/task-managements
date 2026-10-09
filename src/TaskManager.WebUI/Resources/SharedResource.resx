@@ -101,7 +101,6 @@
   <data name="BoardEditHint" xml:space="preserve"><value>แก้ไขชื่อและคำอธิบายบอร์ด</value></data>
   <data name="BoardOwnerOnlyHint" xml:space="preserve"><value>เฉพาะผู้สร้างบอร์ดเท่านั้นที่แก้ไขได้</value></data>
   <data name="BoardManage" xml:space="preserve"><value>จัดการบอร์ด</value></data>
-  <data name="BoardLoadSample" xml:space="preserve"><value>โหลดข้อมูลตัวอย่าง</value></data>
   <data name="BoardReset" xml:space="preserve"><value>รีเซ็ตบอร์ด</value></data>
   <data name="BoardCreateDialogDescription" xml:space="preserve"><value>ตั้งชื่อพื้นที่ทำงานสำหรับทีมของคุณ</value></data>
   <data name="BoardCloseDialog" xml:space="preserve"><value>ปิดหน้าต่าง</value></data>
@@ -121,4 +120,7 @@
   <data name="BoardResetHint" xml:space="preserve"><value>ลบงานทั้งหมดและกลับเป็นบอร์ดเปล่า</value></data>
   <data name="BoardResetConfirmation" xml:space="preserve"><value>ต้องการลบงานทั้งหมดในบอร์ด “{0}” ใช่ไหม? คอลัมน์และสมาชิกจะยังอยู่ การลบนี้ไม่สามารถย้อนกลับได้</value></data>
   <data name="BoardResetConfirm" xml:space="preserve"><value>ยืนยันรีเซ็ตบอร์ด</value></data>
+  <data name="BoardUnassigned" xml:space="preserve"><value>ยังไม่มอบหมาย</value></data>
+  <data name="BoardStartDate" xml:space="preserve"><value>วันที่เริ่มต้น</value></data>
+  <data name="BoardDueDate" xml:space="preserve"><value>วันที่สิ้นสุด</value></data>
 </root>
