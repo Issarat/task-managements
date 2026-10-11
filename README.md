@@ -28,6 +28,27 @@ For a manual smoke test, open the same public board URL in two browsers and
 create, edit, delete or move a task. The other browser should update without
 F5. Keep an edit dialog open there to confirm its unsaved inputs are preserved.
 
+## Online board members
+
+The header avatars now reflect live SignalR connections, not historical
+`BoardParticipants` rows. The server derives the identity from the guest cookie,
+deduplicates multiple tabs for the same guest, and broadcasts an updated roster
+when a connection joins or disconnects. Up to four avatars are shown, with `+N`
+and a tooltip containing the remaining names. Members used by task assignee
+fields still come from the database, including people currently offline.
+
+Guest/board expiry removes connections from presence and their SignalR group
+within five seconds and tells the browser to stop its connection. An abrupt
+network loss is reflected once SignalR detects the disconnect, not necessarily
+instantly. The browser clears unknown online state during reconnect and never
+replaces online avatars with DB membership markup during a task refresh.
+
+Presence is in memory and supports a single application instance. Server
+restart clears it and reconnecting clients rebuild it. Multiple application
+instances would need shared presence and a SignalR scale-out setup. No migration
+or online-status DB column is required. Task editing indicators are not included
+in this feature.
+
 ## Expired demo data cleanup
 
 The app runs a cleanup once on startup and every 5 minutes while it is running.

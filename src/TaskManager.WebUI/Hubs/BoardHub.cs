@@ -1,13 +1,17 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using TaskManager.Application.Interfaces;
+using TaskManager.WebUI.Models;
+using TaskManager.WebUI.Services;
 
 namespace TaskManager.WebUI.Hubs;
 
 public sealed class BoardHub(
     IGuestService guestService,
-    IBoardService boardService) : Hub
+    IBoardService boardService,
+    BoardPresenceService presence,
+    ILogger<BoardHub> logger) : Hub
 {
-    public async Task JoinBoard(string publicId)
+    public async Task<BoardPresenceSnapshot> JoinBoard(string publicId)
     {
         var cancellationToken = Context.ConnectionAborted;
 
@@ -29,6 +33,10 @@ public sealed class BoardHub(
         if (guest is null)
             throw new HubException("Session หมดอายุ กรุณาเริ่มใหม่");
 
+        var board = await boardService.GetPreviewAsync(publicId, cancellationToken);
+        if (board is null)
+            throw new HubException("ไม่สามารถเข้าร่วมบอร์ดนี้ได้");
+
         // Service คืนเฉพาะบอร์ดที่ Guest เป็นสมาชิกและยังไม่หมดอายุ
         var boards = await boardService.GetListBySessionIdAsync(
             guest.Id,
@@ -37,11 +45,53 @@ public sealed class BoardHub(
         if (!boards.Any(board => board.PublicId == publicId))
             throw new HubException("ไม่สามารถเข้าร่วมบอร์ดนี้ได้");
 
+        if (Context.Items.TryGetValue("BoardPublicId", out var joinedBoard)
+            && !string.Equals(joinedBoard as string, publicId, StringComparison.Ordinal))
+            throw new HubException("การเชื่อมต่อนี้เข้าร่วมบอร์ดอื่นแล้ว");
+
         // เพิ่มการเชื่อมต่อของแท็บนี้เข้ากลุ่ม
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             $"board:{publicId}",
             cancellationToken);
+
+        Context.Items["BoardPublicId"] = publicId;
+        var expiresAtUtc = guest.ExpiresAtUtc < board.ExpiresAtUtc
+            ? guest.ExpiresAtUtc : board.ExpiresAtUtc;
+        BoardPresenceSnapshot snapshot;
+        try
+        {
+            snapshot = presence.Join(Context.ConnectionId, publicId,
+                new(guest.Id, guest.DisplayName, guest.ShortName, guest.AvatarColor),
+                expiresAtUtc, cancellationToken);
+        }
+        catch (InvalidOperationException)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"board:{publicId}");
+            throw new HubException("ไม่สามารถเข้าร่วมบอร์ดนี้ได้");
+        }
+        await BroadcastPresenceAsync(snapshot);
+        return snapshot;
     }
 
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var snapshot = presence.Leave(Context.ConnectionId);
+        if (snapshot is not null)
+            await BroadcastPresenceAsync(snapshot);
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task BroadcastPresenceAsync(BoardPresenceSnapshot snapshot)
+    {
+        try
+        {
+            await Clients.Group($"board:{snapshot.PublicId}")
+                .SendAsync("BoardPresenceChanged", snapshot);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Could not publish board presence.");
+        }
+    }
 }

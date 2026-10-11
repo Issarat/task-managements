@@ -30,6 +30,8 @@ builder.Services.AddOptions<ExpiredDataCleanupOptions>()
     .ValidateOnStart();
 builder.Services.AddHostedService<ExpiredDataCleanupBackgroundService>();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<BoardPresenceService>();
+builder.Services.AddHostedService<BoardPresenceBackgroundService>();
 
 var app = builder.Build();
 

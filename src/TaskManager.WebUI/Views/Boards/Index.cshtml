@@ -96,19 +96,9 @@
             </div>
 
             <div class="board-header__actions">
-                <div class="board-members" aria-label="@Text["BoardMembersLabel"]">
-                    @foreach (var member in Model.Members.Take(4))
-                    {
-                        <span class="board-member-avatar"
-                              style="@($"--avatar-color: {member.Color};")"
-                              title="@member.DisplayName">
-                            @member.ShortName
-                        </span>
-                    }
-                    @if (Model.Members.Count > 4)
-                    {
-                        <span class="board-member-more">+@(Model.Members.Count - 4)</span>
-                    }
+                <div class="board-members" data-board-online-members
+                     aria-label="@Text["BoardOnlineMembersLabel"]" aria-live="polite"
+                     data-online-hint="@Text["BoardOnlineMemberHint"]">
                 </div>
 
                 <button class="board-primary-action" type="button"

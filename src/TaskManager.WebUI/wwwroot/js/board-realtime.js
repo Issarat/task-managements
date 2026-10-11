@@ -15,12 +15,48 @@
     let refreshTimer;
     let startTimer;
     let connectionErrorRetry = true;
+    const onlineMembers = board.querySelector('[data-board-online-members]');
+    let presenceRevision = -1;
+
+    const clearOnlineMembers = () => {
+        presenceRevision = -1;
+        onlineMembers?.replaceChildren();
+    };
+
+    const renderOnlineMembers = (snapshot) => {
+        if (disposed || !onlineMembers || snapshot?.publicId !== publicId
+            || !Number.isSafeInteger(snapshot.revision) || snapshot.revision <= presenceRevision
+            || !Array.isArray(snapshot.members)) return;
+
+        presenceRevision = snapshot.revision;
+        const members = [...new Map(snapshot.members.map(member => [member.guestId, member])).values()];
+        const avatars = members.slice(0, 4).map(member => {
+            const avatar = document.createElement('span');
+            avatar.className = 'board-member-avatar';
+            avatar.textContent = member.shortName;
+            avatar.title = `${member.displayName} — ${onlineMembers.dataset.onlineHint}`;
+            avatar.setAttribute('aria-label', avatar.title);
+            avatar.style.setProperty('--avatar-color', /^#[0-9a-f]{6}$/i.test(member.avatarColor)
+                ? member.avatarColor : '#94a3b8');
+            return avatar;
+        });
+        if (members.length > 4) {
+            const more = document.createElement('span');
+            more.className = 'board-member-more';
+            more.textContent = `+${members.length - 4}`;
+            more.title = members.slice(4).map(member => member.displayName).join('\n');
+            more.setAttribute('aria-label', more.title);
+            avatars.push(more);
+        }
+        onlineMembers.replaceChildren(...avatars);
+    };
 
     const stopForUnavailableBoard = async () => {
         connectionErrorRetry = false;
         refreshNeeded = false;
         clearTimeout(refreshTimer);
         refreshTimer = null;
+        clearOnlineMembers();
         await connection.stop();
     };
 
@@ -69,7 +105,8 @@
                 return;
             }
 
-            for (const selector of ['.kanban-grid', '.board-heading', '.board-members', '.board-sidebar__workspace']) {
+            // Online avatars belong to the live connection, not DB membership markup.
+            for (const selector of ['.kanban-grid', '.board-heading', '.board-sidebar__workspace']) {
                 const current = board.querySelector(selector);
                 const updated = updatedBoard.querySelector(selector);
                 if (current && updated) current.replaceChildren(...updated.childNodes);
@@ -98,10 +135,14 @@
     connection.on('BoardChanged', (changedPublicId) => {
         if (changedPublicId === publicId) invalidateBoard();
     });
+    connection.on('BoardPresenceChanged', renderOnlineMembers);
+    connection.on('BoardSessionExpired', stopForUnavailableBoard);
+    connection.onreconnecting(clearOnlineMembers);
 
     const joinBoard = async () => {
         try {
-            await connection.invoke('JoinBoard', publicId);
+            const snapshot = await connection.invoke('JoinBoard', publicId);
+            renderOnlineMembers(snapshot);
             // Also catch changes made while this connection was offline.
             invalidateBoard();
         } catch (error) {
@@ -124,6 +165,7 @@
     };
 
     connection.onclose(() => {
+        clearOnlineMembers();
         // withAutomaticReconnect stops after its default attempts are exhausted.
         // Retry network disconnects, but not a failed JoinBoard authorization.
         if (!disposed && connectionErrorRetry) startTimer = setTimeout(start, 5000);
@@ -132,6 +174,7 @@
         disposed = true;
         clearTimeout(startTimer);
         clearTimeout(refreshTimer);
+        clearOnlineMembers();
         connection.stop();
     });
     window.addEventListener('pageshow', (event) => {

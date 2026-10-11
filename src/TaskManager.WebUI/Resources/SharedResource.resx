@@ -168,4 +168,6 @@
   <data name="SharedBoardTrialNote" xml:space="preserve"><value>ระบบจะสร้างชื่อ Guest แบบสุ่มให้คุณและเข้าบอร์ดนี้ โดยไม่สร้างบอร์ดใหม่</value></data>
   <data name="SharedBoardUnavailableTitle" xml:space="preserve"><value>บอร์ดนี้ไม่พร้อมใช้งาน</value></data>
   <data name="SharedBoardUnavailableDescription" xml:space="preserve"><value>ลิงก์อาจไม่ถูกต้องหรือบอร์ดหมดอายุแล้ว คุณสามารถเริ่มทดลองใช้งานเพื่อสร้างบอร์ดของคุณเองได้</value></data>
+  <data name="BoardOnlineMembersLabel" xml:space="preserve"><value>ผู้ที่ออนไลน์ในบอร์ด</value></data>
+  <data name="BoardOnlineMemberHint" xml:space="preserve"><value>ออนไลน์อยู่ในบอร์ดนี้</value></data>
 </root>

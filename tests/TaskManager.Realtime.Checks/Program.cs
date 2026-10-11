@@ -14,15 +14,19 @@ using TaskManager.WebUI.Controllers;
 using TaskManager.WebUI.Hubs;
 using TaskManager.WebUI.Models;
 using TaskManager.WebUI.Services;
+using TaskManager.WebUI.BackgroundServices;
 
 // Isolated host with fake application services: never connects to the demo DB.
 var guests = new FakeGuests();
 var boards = new FakeBoards(guests);
 var tasks = new FakeTasks();
+var liveClock = new ManualTimeProvider(DateTimeOffset.UtcNow);
 var builder = WebApplication.CreateBuilder();
 builder.Logging.ClearProviders();
 builder.WebHost.UseUrls("http://127.0.0.1:0");
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<TimeProvider>(liveClock);
+builder.Services.AddSingleton<BoardPresenceService>();
 builder.Services.AddSingleton<IGuestService>(guests);
 builder.Services.AddSingleton<IBoardService>(boards);
 await using var app = builder.Build();
@@ -48,6 +52,22 @@ Require(!await other.Join("board-a"), "non-member rejected");
 Require(!await a.Join("missing"), "missing board rejected");
 Require(!await a.Join(new string('x', 33)), "invalid ID rejected");
 Pass("hub rejects missing/expired guests, non-members and invalid boards");
+
+Require(b.JoinSnapshot?.Members.Count == 2, "joining returns the current online roster");
+Require((await a.Presence(2, b.JoinSnapshot!.Revision))?.Members.Count == 2, "A sees B join live");
+Require(other.JoinSnapshot?.Members.Count == 1 && other.JoinSnapshot.Members[0].GuestId == guests.Other,
+    "other board has its own roster");
+Pass("presence broadcasts joins and isolates each board roster");
+await using var duplicateTab = await HubSocket.Connect(address, "test-a");
+Require(await duplicateTab.Join("board-a"), "duplicate tab joins");
+Require(duplicateTab.JoinSnapshot?.Members.Count == 2, "same guest is counted once");
+Require(await duplicateTab.Join("board-a"), "repeated join is idempotent");
+Require(duplicateTab.JoinSnapshot?.Members.Count == 2, "repeated join has no duplicate avatar");
+var duplicateRevision = duplicateTab.JoinSnapshot!.Revision;
+await duplicateTab.DisposeAsync();
+Require((await b.Presence(2, duplicateRevision + 1))?.Members.Any(member => member.GuestId == guests.A) == true,
+    "closing one tab keeps the guest's other connection online");
+Pass("multiple tabs and repeated joins show one avatar until the last tab closes");
 
 var realHub = app.Services.GetRequiredService<IHubContext<BoardHub>>();
 var localizer = new FakeText();
@@ -111,11 +131,63 @@ Require(await Controller().Snapshot("board-a", default) is ViewResult, "snapshot
 Pass("snapshot rejects missing guest/non-member and renders valid board");
 
 await a.DisposeAsync();
+Require((await b.Presence(1, duplicateRevision + 1))?.Members.Single().GuestId == guests.B,
+    "last connection leaving removes only that guest");
+Pass("disconnecting the last tab removes the avatar live");
 await using var reconnect = await HubSocket.Connect(address, "test-a");
 Require(await reconnect.Join("board-a"), "rejoin after reconnect");
 await realHub.Clients.Group("board:board-a").SendAsync("BoardChanged", "board-a");
 Require(await reconnect.Notification() == "board-a", "reconnected client receives event");
 Pass("new connection rejoins and receives notifications");
+Require(reconnect.JoinSnapshot?.Members.Count == 2, "reconnect restores the avatar");
+Pass("reconnect restores presence alongside existing users");
+
+var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+var state = new BoardPresenceService(clock);
+var profile = new OnlineBoardMemberModel(guests.A, "A", "A", "#123456");
+var lifetime = clock.GetUtcNow().UtcDateTime;
+state.Join("one", "board-a", profile, lifetime.AddSeconds(10));
+state.Join("two", "board-a", profile, lifetime.AddSeconds(20));
+state.Join("other", "board-b", profile, lifetime.AddSeconds(30));
+clock.Advance(TimeSpan.FromSeconds(10));
+var expiration = state.RemoveExpired();
+Require(expiration.Connections.Count == 1 && expiration.Connections[0].ConnectionId == "one", "inclusive expiry");
+Require(expiration.Snapshots.Single().Members.Count == 1, "another unexpired tab remains online");
+Require(expiration.Snapshots.Single().PublicId == "board-a", "expiry only broadcasts affected boards");
+clock.Advance(TimeSpan.FromSeconds(10));
+Require(state.RemoveExpired().Snapshots.Single().Members.Count == 0, "expired final tab is offline");
+Require(state.RemoveExpired().Connections.Count == 0, "expiry is idempotent");
+Require(state.Leave("missing") is null, "unknown disconnect is harmless");
+Require(state.Leave("other")?.Members.Count == 0, "empty roster on final leave");
+Pass("expiry is inclusive, deduplicated, isolated, bounded to live connections and idempotent");
+try { state.Join("expired", "board-a", profile, lifetime); throw new Exception("Expired join accepted"); }
+catch (InvalidOperationException) { }
+using (var cancelled = new CancellationTokenSource())
+{
+    cancelled.Cancel();
+    try { state.Join("cancelled", "board-a", profile, lifetime.AddHours(1), cancelled.Token); throw new Exception("Cancelled join accepted"); }
+    catch (OperationCanceledException) { }
+}
+Pass("expired or cancelled joins never add online users");
+
+// Exercise the production expiry worker over real sockets without sleeping for
+// an hour and without touching either the demo DB or real guest identities.
+await b.Notification(); // drain the preceding manual BoardChanged broadcast
+liveClock.Advance(TimeSpan.FromHours(2));
+using (var expiryWorker = new BoardPresenceBackgroundService(
+    app.Services.GetRequiredService<BoardPresenceService>(), realHub, liveClock,
+    NullLogger<BoardPresenceBackgroundService>.Instance))
+{
+    await expiryWorker.StartAsync(default);
+    using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+    await Task.WhenAll(b.SessionExpired, other.SessionExpired, reconnect.SessionExpired).WaitAsync(deadline.Token);
+    await realHub.Clients.Group("board:board-a").SendAsync("BoardChanged", "board-a");
+    Require(await b.Notification(150) is null, "expired connections leave the SignalR group");
+    await expiryWorker.StopAsync(default);
+}
+Require(app.Services.GetRequiredService<BoardPresenceService>().RemoveExpired().Connections.Count == 0,
+    "worker removes expired connections");
+Pass("expiry worker notifies expired browsers and removes real group memberships");
 Console.WriteLine($"{passed} server checks passed; no real database used.");
 // Close clients before the host so the test's receive loops can stop cleanly.
 foreach (var client in new[] { a, b, other, missing, expired, reconnect })
@@ -126,6 +198,10 @@ sealed class HubSocket : IAsyncDisposable
 {
     readonly ClientWebSocket socket = new();
     readonly Channel<JsonElement> messages = Channel.CreateUnbounded<JsonElement>();
+    readonly Channel<BoardPresenceSnapshot> presence = Channel.CreateUnbounded<BoardPresenceSnapshot>();
+    readonly TaskCompletionSource sessionExpired = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public Task SessionExpired => sessionExpired.Task;
+    public BoardPresenceSnapshot? JoinSnapshot { get; private set; }
     readonly CancellationTokenSource shutdown = new();
     Task? reader;
     int invocation;
@@ -158,14 +234,22 @@ sealed class HubSocket : IAsyncDisposable
                 while ((separator = pending.IndexOf('\u001e')) >= 0)
                 {
                     using var json = JsonDocument.Parse(pending[..separator]);
-                    await messages.Writer.WriteAsync(json.RootElement.Clone());
+                    var message = json.RootElement;
+                    if (message.TryGetProperty("target", out var target)
+                        && target.GetString() == "BoardPresenceChanged")
+                        await presence.Writer.WriteAsync(message.GetProperty("arguments")[0]
+                            .Deserialize<BoardPresenceSnapshot>(new JsonSerializerOptions(JsonSerializerDefaults.Web))!);
+                    else if (message.TryGetProperty("target", out target) && target.GetString() == "BoardSessionExpired")
+                        sessionExpired.TrySetResult();
+                    else
+                        await messages.Writer.WriteAsync(message.Clone());
                     pending = pending[(separator + 1)..];
                 }
             }
         }
         catch (OperationCanceledException) { }
         catch (WebSocketException) when (shutdown.IsCancellationRequested) { }
-        finally { messages.Writer.TryComplete(); }
+        finally { messages.Writer.TryComplete(); presence.Writer.TryComplete(); }
     }
     public async Task<bool> Join(string id)
     {
@@ -176,7 +260,11 @@ sealed class HubSocket : IAsyncDisposable
         {
             var message = await messages.Reader.ReadAsync(timeout.Token);
             if (message.TryGetProperty("invocationId", out var value) && value.GetString() == callId)
+            {
+                if (message.TryGetProperty("result", out var result))
+                    JoinSnapshot = result.Deserialize<BoardPresenceSnapshot>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
                 return !message.TryGetProperty("error", out _);
+            }
         }
     }
     public async Task<string?> Notification(int milliseconds = 3000)
@@ -189,6 +277,20 @@ sealed class HubSocket : IAsyncDisposable
                 var message = await messages.Reader.ReadAsync(timeout.Token);
                 if (message.TryGetProperty("target", out var target) && target.GetString() == "BoardChanged")
                     return message.GetProperty("arguments")[0].GetString();
+            }
+        }
+        catch (OperationCanceledException) { return null; }
+    }
+    public async Task<BoardPresenceSnapshot?> Presence(int expectedCount, long minimumRevision)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            while (true)
+            {
+                var snapshot = await presence.Reader.ReadAsync(timeout.Token);
+                if (snapshot.Revision >= minimumRevision && snapshot.Members.Count == expectedCount)
+                    return snapshot;
             }
         }
         catch (OperationCanceledException) { return null; }
@@ -220,7 +322,8 @@ sealed class FakeBoards(FakeGuests guests) : IBoardService
     public Guid TaskId { get; } = Guid.NewGuid();
     public Guid ColumnId { get; } = Guid.NewGuid();
     public bool Saved { get; set; }
-    public Task<BoardModel?> GetPreviewAsync(string publicId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<BoardModel?> GetPreviewAsync(string publicId, CancellationToken cancellationToken = default) =>
+        Task.FromResult<BoardModel?>(publicId is "board-a" or "board-b" ? Metadata(publicId) : null);
     public Task<CreatedBoardModel> CreateAsync(CreateBoardRequestModel request, CancellationToken cancellationToken = default) => throw new Exception("Must not seed a board");
     public Task<IReadOnlyList<BoardNavigationModel>> GetListBySessionIdAsync(Guid guestId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<BoardNavigationModel>>([new(Guid.NewGuid(), guestId == guests.Other ? "board-b" : "board-a", "Test")]);
@@ -253,4 +356,10 @@ sealed class BrokenHub : IHubContext<BoardHub>
 {
     public IHubClients Clients => throw new InvalidOperationException("Synthetic notification failure");
     public IGroupManager Groups => throw new NotSupportedException();
+}
+sealed class ManualTimeProvider(DateTimeOffset initial) : TimeProvider
+{
+    private DateTimeOffset now = initial;
+    public override DateTimeOffset GetUtcNow() => now;
+    public void Advance(TimeSpan delta) => now += delta;
 }
