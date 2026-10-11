@@ -25,6 +25,7 @@ public static class DependencyInjection
 
         services.AddScoped<IAnonymousUserRepository, AnonymousUserRepository>();
         services.AddScoped<IBoardRepository, BoardRepository>();
+        services.AddScoped<ITaskRepository, TaskRepository>();
 
         return services;
     }

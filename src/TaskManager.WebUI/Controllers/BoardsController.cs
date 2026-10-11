@@ -14,6 +14,7 @@ public sealed class BoardsController(
     BoardOwnerCookieService boardOwnerCookieService,
     IGuestService guestService,
     IBoardService boardService,
+    ITaskService taskService,
     IStringLocalizer<SharedResource> text) : Controller
 {
     [HttpGet("/boards")]
@@ -162,6 +163,79 @@ public sealed class BoardsController(
     }
 
 
+    [HttpPost("/boards/{publicId}/tasks/create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateTask(
+        string publicId,
+        [Bind(Prefix = "CreateTask")] CreateTaskFormModel form,
+        CancellationToken cancellationToken)
+    {
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+        {
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
+        var board = await boardService.GetAsync(publicId, guest.Id, cancellationToken);
+        if (board is null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(form.Title) || form.Title.Trim().Length > 60)
+            ModelState.AddModelError("CreateTask.Title", text["TaskTitleValidation"]);
+        if (form.DescriptionMarkdown?.Length > 20_000)
+            ModelState.AddModelError("CreateTask.DescriptionMarkdown", text["TaskDescriptionValidation"]);
+        if (!Enum.IsDefined(form.Priority))
+            ModelState.AddModelError("CreateTask.Priority", text["TaskPriorityValidation"]);
+        if (!board.Columns.Any(column => column.ColumnKey == "backlog"))
+            ModelState.AddModelError(string.Empty, text["TaskBacklogMissing"]);
+        if (form.AssignedToParticipantId.HasValue
+            && !board.Participants.Any(participant =>
+                participant.BoardParticipantId == form.AssignedToParticipantId.Value))
+            ModelState.AddModelError("CreateTask.AssignedToParticipantId", text["TaskAssigneeValidation"]);
+        if (form.StartDate.HasValue && form.DueDate.HasValue
+            && form.StartDate.Value > form.DueDate.Value)
+            ModelState.AddModelError("CreateTask.DueDate", text["TaskDateValidation"]);
+
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var taskId = await taskService.CreateAsync(
+                    publicId, guest.Id,
+                    new CreateTaskRequestModel(form.Title,
+                        form.DescriptionMarkdown, form.Priority,
+                        form.AssignedToParticipantId, form.StartDate, form.DueDate),
+                    cancellationToken);
+
+                return taskId.HasValue
+                    ? RedirectToAction(nameof(Index), new { publicId })
+                    : NotFound();
+            }
+            catch (ArgumentException)
+            {
+                ModelState.AddModelError(string.Empty, text["TaskInvalidDetails"]);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                ModelState.AddModelError(string.Empty, text["TaskConcurrentChange"]);
+            }
+        }
+
+        var navigationBoards = await boardService.GetListBySessionIdAsync(
+            guest.Id, cancellationToken);
+        var page = MapPage(board, navigationBoards, guest,
+            !string.IsNullOrWhiteSpace(boardOwnerCookieService.GetToken(publicId)))
+            with { CreateTask = form, ShowCreateTaskDialog = true };
+
+        return View("Index", page);
+    }
+
     private async Task<GuestResponseModel?> GetCurrentGuestAsync(
         CancellationToken cancellationToken)
     {
@@ -194,6 +268,7 @@ public sealed class BoardsController(
 
         var members = response.Participants
             .Select(participant => new BoardMemberViewModel(
+                participant.BoardParticipantId,
                 AvatarExtension.CreateShortName(participant.DisplayName),
                 participant.DisplayName,
                 participant.AvatarColor))
@@ -202,6 +277,7 @@ public sealed class BoardsController(
         var columns = response.Columns
             .OrderBy(column => column.SortOrder)
             .Select(column => new BoardColumnViewModel(
+                column.BoardColumnId,
                 column.Name,
                 column.ColumnKey,
                 GetColumnTone(column.ColumnKey),

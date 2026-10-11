@@ -15,6 +15,7 @@ builder.Services.AddScoped<GuestCookieService>();
 builder.Services.AddScoped<BoardOwnerCookieService>();
 builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IBoardService, BoardService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();

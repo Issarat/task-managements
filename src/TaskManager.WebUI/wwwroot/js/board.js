@@ -51,6 +51,9 @@
     });
 
     document.querySelectorAll('dialog').forEach((dialog) => {
+        if (dialog.dataset.dialogAutoOpen === 'true') {
+            dialog.showModal();
+        }
         dialog.addEventListener('click', (event) => {
             if (event.target === dialog) {
                 dialog.close();

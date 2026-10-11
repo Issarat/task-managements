@@ -107,7 +107,8 @@
                     }
                 </div>
 
-                <button class="board-primary-action" type="button">
+                <button class="board-primary-action" type="button"
+                        data-dialog-open="create-task-dialog">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                     @Text["BoardAddTask"]
                 </button>
@@ -195,6 +196,78 @@
         </section>
     </main>
 </div>
+
+<dialog class="board-dialog" id="create-task-dialog"
+        data-dialog-auto-open="@(Model.ShowCreateTaskDialog ? "true" : null)"
+        aria-labelledby="create-task-title">
+    <form class="board-dialog__form"
+          asp-controller="Boards" asp-action="CreateTask"
+          asp-route-publicId="@Model.PublicId" method="post">
+        <header class="board-dialog__header">
+            <div>
+                <h2 id="create-task-title">@Text["BoardAddTask"]</h2>
+                <p>@Text["TaskCreateDescription"]</p>
+            </div>
+            <button class="board-dialog__close" type="button" data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+        <div class="board-dialog__content">
+            <div asp-validation-summary="All" class="board-form-errors" role="alert"></div>
+            <label class="board-dialog__field">
+                <span>@Text["TaskTitleLabel"] <i>*</i></span>
+                <input asp-for="CreateTask.Title" maxlength="60" required
+                       placeholder="@Text["TaskTitlePlaceholder"]" data-dialog-initial-focus />
+            </label>
+            <label class="board-dialog__field">
+                <span>@Text["BoardDescriptionLabel"]</span>
+                <textarea asp-for="CreateTask.DescriptionMarkdown" maxlength="20000"
+                          rows="3" placeholder="@Text["TaskDescriptionPlaceholder"]"></textarea>
+            </label>
+            <div class="board-dialog__row">
+                <label class="board-dialog__field">
+                    <span>@Text["TaskColumnLabel"]</span>
+                    <select disabled aria-label="@Text["TaskColumnLabel"]">
+                        <option selected>@Text["TaskDefaultColumn"]</option>
+                    </select>
+                </label>
+                <label class="board-dialog__field">
+                    <span>@Text["TaskPriorityLabel"]</span>
+                    <select asp-for="CreateTask.Priority">
+                        <option value="1">@Text["BoardPriorityLow"]</option>
+                        <option value="2">@Text["BoardPriorityMedium"]</option>
+                        <option value="3">@Text["BoardPriorityHigh"]</option>
+                    </select>
+                </label>
+            </div>
+            <label class="board-dialog__field">
+                <span>@Text["TaskAssigneeLabel"]</span>
+                <select asp-for="CreateTask.AssignedToParticipantId">
+                    <option value="">@Text["BoardUnassigned"]</option>
+                    @foreach (var member in Model.Members)
+                    {
+                        <option value="@member.ParticipantId">@member.DisplayName</option>
+                    }
+                </select>
+            </label>
+            <div class="board-dialog__row">
+                <label class="board-dialog__field">
+                    <span>@Text["BoardStartDate"]</span>
+                    <input asp-for="CreateTask.StartDate" type="date" asp-format="{0:yyyy-MM-dd}" />
+                </label>
+                <label class="board-dialog__field">
+                    <span>@Text["BoardDueDate"]</span>
+                    <input asp-for="CreateTask.DueDate" type="date" asp-format="{0:yyyy-MM-dd}" />
+                </label>
+            </div>
+        </div>
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button" data-dialog-close>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--primary"
+                    type="submit">@Text["TaskCreateSubmit"]</button>
+        </footer>
+    </form>
+</dialog>
 
 <dialog class="board-dialog" id="create-board-dialog">
     <form class="board-dialog__form"

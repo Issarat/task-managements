@@ -640,7 +640,8 @@
   width: min(520px, calc(100vw - 32px));
   max-width: none;
   padding: 0;
-  overflow: hidden;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   color: #172033;
   border: 0;
   border-radius: 18px;
@@ -722,6 +723,7 @@
 }
 
 .board-dialog__field input,
+.board-dialog__field select,
 .board-dialog__field textarea {
   width: 100%;
   padding: 11px 13px;
@@ -740,10 +742,44 @@
   resize: vertical;
 }
 
+.board-dialog__field select:disabled {
+  color: #69768f;
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .board-dialog__field input:focus,
+.board-dialog__field select:focus,
 .board-dialog__field textarea:focus {
   border-color: #2f6fec;
   box-shadow: 0 0 0 3px rgba(47, 111, 236, 0.13);
+}
+
+.board-dialog__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.board-form-errors {
+  color: #b91c1c;
+  font-size: var(--text-sm);
+}
+
+.board-form-errors.validation-summary-valid {
+  display: none;
+}
+
+.board-form-errors ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+@media (max-width: 420px) {
+  .board-dialog__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .board-dialog__actions {

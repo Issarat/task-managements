@@ -123,4 +123,23 @@
   <data name="BoardUnassigned" xml:space="preserve"><value>ยังไม่มอบหมาย</value></data>
   <data name="BoardStartDate" xml:space="preserve"><value>วันที่เริ่มต้น</value></data>
   <data name="BoardDueDate" xml:space="preserve"><value>วันที่สิ้นสุด</value></data>
+  <data name="TaskCreateDescription" xml:space="preserve"><value>เพิ่มงานและกำหนดผู้รับผิดชอบในบอร์ดนี้</value></data>
+  <data name="TaskTitleLabel" xml:space="preserve"><value>ชื่องาน</value></data>
+  <data name="TaskTitlePlaceholder" xml:space="preserve"><value>เช่น ออกแบบ Landing Page</value></data>
+  <data name="TaskDescriptionPlaceholder" xml:space="preserve"><value>รายละเอียดงาน (รองรับการเก็บข้อความ Markdown)</value></data>
+  <data name="TaskColumnLabel" xml:space="preserve"><value>คอลัมน์</value></data>
+  <data name="TaskPriorityLabel" xml:space="preserve"><value>ความสำคัญ</value></data>
+  <data name="TaskAssigneeLabel" xml:space="preserve"><value>ผู้รับผิดชอบ</value></data>
+  <data name="TaskCreateSubmit" xml:space="preserve"><value>เพิ่มงาน</value></data>
+  <data name="TaskTitleValidation" xml:space="preserve"><value>กรุณาระบุชื่องานไม่เกิน 60 ตัวอักษร</value></data>
+  <data name="TaskDescriptionValidation" xml:space="preserve"><value>คำอธิบายต้องไม่เกิน 20,000 ตัวอักษร</value></data>
+  <data name="TaskPriorityValidation" xml:space="preserve"><value>กรุณาเลือกระดับความสำคัญที่ถูกต้อง</value></data>
+  <data name="TaskColumnValidation" xml:space="preserve"><value>กรุณาเลือกคอลัมน์ในบอร์ดนี้</value></data>
+  <data name="TaskAssigneeValidation" xml:space="preserve"><value>กรุณาเลือกผู้รับผิดชอบในบอร์ดนี้</value></data>
+  <data name="TaskDateValidation" xml:space="preserve"><value>วันที่สิ้นสุดต้องไม่อยู่ก่อนวันที่เริ่มต้น</value></data>
+  <data name="TaskInvalidDetails" xml:space="preserve"><value>ข้อมูลบางส่วนไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value></data>
+  <data name="TaskConcurrentChange" xml:space="preserve"><value>บอร์ดมีการเปลี่ยนแปลงระหว่างบันทึก กรุณาลองเพิ่มงานอีกครั้ง</value></data>
+  <data name="TaskInvalidDate" xml:space="preserve"><value>กรุณาระบุวันที่ที่ถูกต้อง</value></data>
+  <data name="TaskDefaultColumn" xml:space="preserve"><value>Backlog</value></data>
+  <data name="TaskBacklogMissing" xml:space="preserve"><value>ไม่พบคอลัมน์ Backlog ในบอร์ดนี้ จึงไม่สามารถเพิ่มงานได้</value></data>
 </root>

@@ -10,7 +10,11 @@ public sealed record BoardPageViewModel(
     GuestResponseModel CurrentGuest,
     IReadOnlyList<BoardNavigationViewModel> NavigationBoards,
     IReadOnlyList<BoardMemberViewModel> Members,
-    IReadOnlyList<BoardColumnViewModel> Columns);
+    IReadOnlyList<BoardColumnViewModel> Columns)
+{
+    public CreateTaskFormModel CreateTask { get; init; } = new();
+    public bool ShowCreateTaskDialog { get; init; }
+}
 
 public sealed record BoardNavigationViewModel(
     string PublicId,
@@ -18,11 +22,13 @@ public sealed record BoardNavigationViewModel(
     bool IsActive);
 
 public sealed record BoardMemberViewModel(
+    Guid ParticipantId,
     string ShortName,
     string DisplayName,
     string Color);
 
 public sealed record BoardColumnViewModel(
+    Guid ColumnId,
     string Name,
     string Key,
     string Tone,
