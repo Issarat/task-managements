@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using TaskManager.Application.Exceptions;
 using TaskManager.Application.Interfaces;
 using TaskManager.Application.Models;
 using TaskManager.Domain.Enums;
@@ -252,6 +253,51 @@ public sealed class BoardsController(
         return View("Index", page);
     }
 
+    [HttpPost("/boards/{publicId}/tasks/move")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MoveTask(string publicId,
+        Guid taskId, Guid targetColumnId, string? rowVersion,
+        CancellationToken cancellationToken)
+    {
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+
+        try
+        {
+            if (!ModelState.IsValid)
+                throw new ArgumentException("Invalid move request.");
+
+            var version = Convert.FromBase64String(rowVersion ?? string.Empty);
+            var moved = await taskService.MoveAsync(publicId, guest.Id, taskId,
+                targetColumnId, version, cancellationToken);
+            if (!moved)
+                return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+        catch (InvalidTaskColumnChangeException)
+        {
+            TempData["TaskMoveError"] = text["TaskColumnStepValidation"].Value;
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            TempData["TaskMoveError"] = text["TaskMoveConcurrentChange"].Value;
+        }
+        catch (FormatException)
+        {
+            TempData["TaskMoveError"] = text["TaskMoveConcurrentChange"].Value;
+        }
+        catch (ArgumentException)
+        {
+            TempData["TaskMoveError"] = text["TaskInvalidDetails"].Value;
+        }
+
+        return RedirectToAction(nameof(Index), new { publicId });
+    }
+
     [HttpPost("/boards/{publicId}/tasks/update")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateTask(string publicId,
@@ -326,6 +372,10 @@ public sealed class BoardsController(
                         version, cancellationToken);
 
                 return saved ? RedirectToAction(nameof(Index), new { publicId }) : NotFound();
+            }
+            catch (InvalidTaskColumnChangeException)
+            {
+                ModelState.AddModelError("EditTask.BoardColumnId", text["TaskColumnStepValidation"]);
             }
             catch (UnauthorizedAccessException)
             {
@@ -467,7 +517,8 @@ public sealed class BoardsController(
             assignee?.DisplayName ?? text["BoardUnassigned"].Value,
             assignee?.AvatarColor ?? "#94a3b8",
             task.StartDate,
-            task.DueDate);
+            task.DueDate,
+            Convert.ToBase64String(task.RowVersion));
     }
 
     private static string CreateCardDescription(string? markdown)

@@ -149,4 +149,9 @@
   <data name="TaskDeleteConfirm" xml:space="preserve"><value>ยืนยันลบงาน</value></data>
   <data name="TaskOpenLabel" xml:space="preserve"><value>เปิดรายละเอียดและแก้ไขงาน {0}</value></data>
   <data name="TaskEditConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง กรุณาปิดหน้าต่างแล้วเปิดงานใหม่เพื่อโหลดข้อมูลล่าสุดก่อนบันทึกหรือลบอีกครั้ง</value></data>
+  <data name="TaskColumnStepValidation" xml:space="preserve"><value>ย้ายงานได้ครั้งละ 1 คอลัมน์เท่านั้น กรุณาเลือกคอลัมน์ถัดไปหรือก่อนหน้า</value></data>
+  <data name="TaskDragHint" xml:space="preserve"><value>ลากงานเพื่อย้ายคอลัมน์ได้ครั้งละ 1 ขั้น ไปข้างหน้าหรือย้อนกลับ หรือเลือกคอลัมน์ในหน้าต่างแก้ไข</value></data>
+  <data name="TaskDragHandle" xml:space="preserve"><value>ลากเพื่อย้ายงาน</value></data>
+  <data name="TaskMoving" xml:space="preserve"><value>กำลังย้ายงาน...</value></data>
+  <data name="TaskMoveConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง ระบบโหลดข้อมูลล่าสุดแล้ว กรุณาลองย้ายงานอีกครั้ง</value></data>
 </root>

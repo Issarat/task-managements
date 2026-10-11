@@ -4,6 +4,10 @@ namespace TaskManager.Application.Interfaces;
 
 public interface ITaskService
 {
+    Task<bool> MoveAsync(string publicId, Guid anonymousUserId, Guid taskId,
+        Guid targetColumnId, byte[] rowVersion,
+        CancellationToken cancellationToken = default);
+
     Task<bool> UpdateAsync(string publicId, Guid anonymousUserId, Guid taskId,
         UpdateTaskRequestModel request, byte[] rowVersion,
         CancellationToken cancellationToken = default);

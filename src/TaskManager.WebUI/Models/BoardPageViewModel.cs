@@ -46,4 +46,5 @@ public sealed record BoardTaskCardViewModel(
     string AssigneeDisplayName,
     string AssigneeColor,
     DateOnly? StartDate,
-    DateOnly? DueDate);
+    DateOnly? DueDate,
+    string RowVersion);

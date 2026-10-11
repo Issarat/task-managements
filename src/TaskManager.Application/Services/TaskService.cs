@@ -1,3 +1,4 @@
+using TaskManager.Application.Exceptions;
 using TaskManager.Application.Interfaces;
 using TaskManager.Application.Models;
 using TaskManager.Domain.Entities;
@@ -8,6 +9,31 @@ public sealed class TaskService(
     IBoardRepository boardRepository,
     ITaskRepository taskRepository) : ITaskService
 {
+    public async Task<bool> MoveAsync(string publicId, Guid anonymousUserId,
+        Guid taskId, Guid targetColumnId, byte[] rowVersion,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRowVersion(rowVersion);
+        var board = await GetParticipantBoardAsync(publicId, anonymousUserId, cancellationToken);
+        if (board is null)
+            return false;
+
+        var task = await taskRepository.GetAsync(board.Id, taskId, cancellationToken);
+        if (task is null)
+            return false;
+
+        ValidateColumnChange(board, task.BoardColumnId, targetColumnId);
+        if (task.BoardColumnId == targetColumnId)
+            return true;
+
+        task.BoardColumnId = targetColumnId;
+        task.UpdatedAtUtc = DateTime.UtcNow;
+        board.UpdatedAtUtc = task.UpdatedAtUtc;
+        board.MarkActivity(task.UpdatedAtUtc.Value);
+        await taskRepository.SaveAsync(task, rowVersion, delete: false, cancellationToken);
+        return true;
+    }
+
     public async Task<bool> UpdateAsync(string publicId, Guid anonymousUserId,
         Guid taskId, UpdateTaskRequestModel request, byte[] rowVersion,
         CancellationToken cancellationToken = default)
@@ -23,8 +49,7 @@ public sealed class TaskService(
             return false;
 
         ValidateAssignee(board, request.AssignedToParticipantId);
-        if (!board.Columns.Any(column => column.Id == request.BoardColumnId))
-            throw new ArgumentException("Column does not belong to this board.", nameof(request));
+        ValidateColumnChange(board, task.BoardColumnId, request.BoardColumnId);
 
         task.BoardColumnId = request.BoardColumnId;
         task.Title = request.Title.Trim();
@@ -72,6 +97,18 @@ public sealed class TaskService(
             throw new UnauthorizedAccessException("Guest is not a board participant.");
 
         return board;
+    }
+
+    private static void ValidateColumnChange(Board board, Guid currentColumnId, Guid targetColumnId)
+    {
+        var columns = board.Columns.OrderBy(column => column.SortOrder).ToArray();
+        var currentIndex = Array.FindIndex(columns, column => column.Id == currentColumnId);
+        var targetIndex = Array.FindIndex(columns, column => column.Id == targetColumnId);
+        if (currentIndex < 0 || targetIndex < 0)
+            throw new ArgumentException("Column does not belong to this board.");
+
+        if (Math.Abs(targetIndex - currentIndex) > 1)
+            throw new InvalidTaskColumnChangeException();
     }
 
     private static void ValidateRowVersion(byte[] rowVersion)

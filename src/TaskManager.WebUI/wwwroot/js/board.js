@@ -22,6 +22,91 @@
         }
     });
 
+    const moveForm = document.querySelector('[data-task-move-form]');
+    const moveMessage = document.querySelector('[data-task-move-error]');
+    const columns = Array.from(document.querySelectorAll('[data-column-id]'));
+    let draggedCard = null;
+    let sourceColumn = null;
+    let movePending = false;
+
+    const showMoveMessage = (message) => {
+        if (moveMessage) {
+            moveMessage.textContent = message;
+            moveMessage.hidden = false;
+        }
+    };
+
+    const isAdjacentColumn = (column) => sourceColumn
+        && Math.abs(Number(column.dataset.columnIndex)
+            - Number(sourceColumn.dataset.columnIndex)) === 1;
+
+    const clearDrag = () => {
+        draggedCard?.classList.remove('is-dragging');
+        columns.forEach(column => column.classList.remove('is-drop-target', 'is-drop-over'));
+        draggedCard = null;
+        sourceColumn = null;
+    };
+
+    if (moveForm instanceof HTMLFormElement) {
+        document.querySelectorAll('[data-task-id]').forEach(card => {
+            card.addEventListener('dragstart', event => {
+                if (movePending || !event.dataTransfer) {
+                    event.preventDefault();
+                    return;
+                }
+
+                draggedCard = card;
+                sourceColumn = card.closest('[data-column-id]');
+                card.classList.add('is-dragging');
+                if (moveMessage) moveMessage.hidden = true;
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', card.dataset.taskId);
+                columns.forEach(column => {
+                    column.classList.toggle('is-drop-target', Boolean(isAdjacentColumn(column)));
+                });
+            });
+            card.addEventListener('dragend', clearDrag);
+        });
+
+        columns.forEach(column => {
+            column.addEventListener('dragover', event => {
+                if (!draggedCard || movePending) return;
+                event.preventDefault();
+                const allowed = isAdjacentColumn(column);
+                if (event.dataTransfer) event.dataTransfer.dropEffect = allowed ? 'move' : 'none';
+                column.classList.toggle('is-drop-over', Boolean(allowed));
+            });
+            column.addEventListener('dragleave', event => {
+                if (!column.contains(event.relatedTarget)) {
+                    column.classList.remove('is-drop-over');
+                }
+            });
+            column.addEventListener('drop', event => {
+                if (!draggedCard || movePending) return;
+                event.preventDefault();
+                if (column === sourceColumn) {
+                    clearDrag();
+                    return;
+                }
+                if (!isAdjacentColumn(column)) {
+                    showMoveMessage(moveForm.dataset.stepError);
+                    clearDrag();
+                    return;
+                }
+
+                moveForm.elements.namedItem('taskId').value = draggedCard.dataset.taskId;
+                moveForm.elements.namedItem('targetColumnId').value = column.dataset.columnId;
+                moveForm.elements.namedItem('rowVersion').value = draggedCard.dataset.rowVersion;
+                movePending = true;
+                board.setAttribute('aria-busy', 'true');
+                showMoveMessage(moveForm.dataset.movingMessage);
+                clearDrag();
+                // Submit the antiforgery-protected form; only persisted changes appear after redirect.
+                moveForm.requestSubmit();
+            });
+        });
+    }
+
     const showDialog = (dialog) => {
         dialog.showModal();
 

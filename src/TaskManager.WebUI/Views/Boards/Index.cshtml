@@ -3,6 +3,8 @@
 @model BoardPageViewModel
 @{
     ViewData["Title"] = Model.Name;
+    var editTaskColumnIndex = Model.Columns.ToList().FindIndex(column =>
+        column.Tasks.Any(task => task.TaskItemId == Model.EditTask.TaskItemId));
 
     string FormatDate(DateOnly? value) =>
         value?.ToString("dd MMM") ?? Text["BoardEmptyValue"].Value;
@@ -143,12 +145,24 @@
                     </button>
                 </div>
             </div>
-
-
+            <p class="board-drag-hint">@Text["TaskDragHint"]</p>
+            <p class="board-move-error" data-task-move-error role="alert"
+               hidden="@(TempData["TaskMoveError"] is null)">@TempData["TaskMoveError"]</p>
+            <form asp-controller="Boards" asp-action="MoveTask"
+                  asp-route-publicId="@Model.PublicId" method="post" hidden
+                  data-task-move-form
+                  data-step-error="@Text["TaskColumnStepValidation"]"
+                  data-moving-message="@Text["TaskMoving"]">
+                <input type="hidden" name="taskId" />
+                <input type="hidden" name="targetColumnId" />
+                <input type="hidden" name="rowVersion" />
+            </form>
             <div class="kanban-grid">
-                @foreach (var column in Model.Columns)
+                @for (var columnIndex = 0; columnIndex < Model.Columns.Count; columnIndex++)
                 {
-                    <section class="kanban-column tone-@column.Tone" data-column-key="@column.Key">
+                    var column = Model.Columns[columnIndex];
+                    <section class="kanban-column tone-@column.Tone" data-column-key="@column.Key"
+                             data-column-id="@column.ColumnId" data-column-index="@columnIndex">
                         <header class="kanban-column__header">
                             <div>
                                 <i aria-hidden="true"></i>
@@ -160,8 +174,14 @@
                         <div class="kanban-column__tasks">
                             @foreach (var task in column.Tasks)
                             {
-                                <article class="kanban-card">
+                                <article class="kanban-card" draggable="true"
+                                         data-task-id="@task.TaskItemId" data-row-version="@task.RowVersion">
+                                    <span class="kanban-card__drag-handle" aria-hidden="true"
+                                          title="@Text["TaskDragHandle"]">
+                                        <svg viewBox="0 0 16 24"><path d="M5 5h.01M11 5h.01M5 12h.01M11 12h.01M5 19h.01M11 19h.01" /></svg>
+                                    </span>
                                     <h3><a class="kanban-card__open"
+                                           draggable="false"
                                            asp-controller="Boards" asp-action="Index"
                                            asp-route-publicId="@Model.PublicId"
                                            asp-route-taskId="@task.TaskItemId"
@@ -200,6 +220,8 @@
         </section>
     </main>
 </div>
+
+<!------------------------- Model --------------------------->
 
 <dialog class="board-dialog" id="create-task-dialog"
         data-dialog-auto-open="@(Model.ShowCreateTaskDialog ? "true" : null)"
@@ -305,9 +327,11 @@
                 <label class="board-dialog__field">
                     <span>@Text["TaskColumnLabel"]</span>
                     <select asp-for="EditTask.BoardColumnId" required>
-                        @foreach (var column in Model.Columns)
+                        @for (var index = 0; index < Model.Columns.Count; index++)
                         {
-                            <option value="@column.ColumnId">@column.Name</option>
+                            var column = Model.Columns[index];
+                            <option value="@column.ColumnId"
+                                    disabled="@(Math.Abs(index - editTaskColumnIndex) > 1)">@column.Name</option>
                         }
                     </select>
                 </label>
