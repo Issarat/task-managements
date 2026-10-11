@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TaskManager.Application.Interfaces;
 using TaskManager.Infrastructure.Persistence;
 using TaskManager.Infrastructure.Repositories;
+using TaskManager.Infrastructure.Services;
 
 namespace TaskManager.Infrastructure;
 
@@ -26,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IAnonymousUserRepository, AnonymousUserRepository>();
         services.AddScoped<IBoardRepository, BoardRepository>();
         services.AddScoped<ITaskRepository, TaskRepository>();
+        services.AddScoped<IExpiredDataCleanupService, ExpiredDataCleanupService>();
 
         return services;
     }

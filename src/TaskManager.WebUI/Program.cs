@@ -2,6 +2,8 @@ using TaskManager.Application.Interfaces;
 using TaskManager.Application.Services;
 using TaskManager.Infrastructure;
 using TaskManager.WebUI.Services;
+using TaskManager.WebUI.BackgroundServices;
+using TaskManager.WebUI.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,15 @@ builder.Services.AddScoped<IGuestService, GuestService>();
 builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddOptions<ExpiredDataCleanupOptions>()
+    .Bind(builder.Configuration.GetSection(ExpiredDataCleanupOptions.SectionName))
+    .Validate(settings => settings.IntervalMinutes is >= 1 and <= 1440,
+        "Cleanup IntervalMinutes must be between 1 and 1440.")
+    .Validate(settings => settings.BatchSize is >= 1 and <= 1000,
+        "Cleanup BatchSize must be between 1 and 1000.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<ExpiredDataCleanupBackgroundService>();
 
 var app = builder.Build();
 
