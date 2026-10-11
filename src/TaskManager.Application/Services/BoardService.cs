@@ -301,7 +301,8 @@ public sealed class BoardService(IBoardRepository boardRepository)
                     task.AssignedToParticipantId,
                     task.CreatedByParticipantId,
                     task.StartDate,
-                    task.DueDate))
+                    task.DueDate,
+                    task.RowVersion))
                 .ToArray());
     }
 

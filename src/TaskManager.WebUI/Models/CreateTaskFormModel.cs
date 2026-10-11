@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace TaskManager.WebUI.Models;
 
-public sealed class CreateTaskFormModel
+public class CreateTaskFormModel
 {
     public string Title { get; set; } = string.Empty;
     public string? DescriptionMarkdown { get; set; }

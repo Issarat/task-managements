@@ -22,6 +22,16 @@
         }
     });
 
+    const showDialog = (dialog) => {
+        dialog.showModal();
+
+        const initialFocus = dialog.querySelector('[data-dialog-initial-focus]');
+        if (initialFocus instanceof HTMLInputElement) {
+            initialFocus.focus();
+            initialFocus.select();
+        }
+    };
+
     document.querySelectorAll('[data-dialog-open]').forEach((button) => {
         button.addEventListener('click', () => {
             const dialogId = button.getAttribute('data-dialog-open');
@@ -31,13 +41,7 @@
                 return;
             }
 
-            dialog.showModal();
-
-            const initialFocus = dialog.querySelector('[data-dialog-initial-focus]');
-            if (initialFocus instanceof HTMLInputElement) {
-                initialFocus.focus();
-                initialFocus.select();
-            }
+            showDialog(dialog);
         });
     });
 
@@ -51,8 +55,21 @@
     });
 
     document.querySelectorAll('dialog').forEach((dialog) => {
+        dialog.addEventListener('close', () => {
+            if (dialog.id !== 'edit-task-dialog') {
+                return;
+            }
+
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('taskId')) {
+                url.searchParams.delete('taskId');
+                // Keep other query parameters and remove only the closed task's URL state.
+                window.history.replaceState(window.history.state, '', url.href);
+            }
+        });
+
         if (dialog.dataset.dialogAutoOpen === 'true') {
-            dialog.showModal();
+            showDialog(dialog);
         }
         dialog.addEventListener('click', (event) => {
             if (event.target === dialog) {

@@ -14,6 +14,8 @@ public sealed record BoardPageViewModel(
 {
     public CreateTaskFormModel CreateTask { get; init; } = new();
     public bool ShowCreateTaskDialog { get; init; }
+    public EditTaskFormModel EditTask { get; init; } = new();
+    public bool ShowEditTaskDialog { get; init; }
 }
 
 public sealed record BoardNavigationViewModel(
@@ -35,6 +37,7 @@ public sealed record BoardColumnViewModel(
     IReadOnlyList<BoardTaskCardViewModel> Tasks);
 
 public sealed record BoardTaskCardViewModel(
+    Guid TaskItemId,
     string Title,
     string Description,
     string Priority,

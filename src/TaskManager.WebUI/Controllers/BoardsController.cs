@@ -21,6 +21,7 @@ public sealed class BoardsController(
     [HttpGet("/boards/{publicId}")]
     public async Task<IActionResult> Index(
         string? publicId,
+        Guid? taskId,
         CancellationToken cancellationToken)
     {
         var guest = await GetCurrentGuestAsync(cancellationToken);
@@ -59,11 +60,26 @@ public sealed class BoardsController(
         var canManage = !string.IsNullOrWhiteSpace(
             boardOwnerCookieService.GetToken(board.Board.PublicId));
 
-        return View(MapPage(
+        var page = MapPage(
             board,
             navigationBoards,
             guest,
-            canManage));
+            canManage);
+
+        if (taskId.HasValue)
+        {
+            var task = board.Tasks.SingleOrDefault(item => item.TaskItemId == taskId.Value);
+            if (task is null)
+                return NotFound();
+
+            page = page with
+            {
+                EditTask = MapEditTask(task),
+                ShowEditTaskDialog = true
+            };
+        }
+
+        return View(page);
     }
 
     [HttpPost("/boards/create")]
@@ -236,6 +252,125 @@ public sealed class BoardsController(
         return View("Index", page);
     }
 
+    [HttpPost("/boards/{publicId}/tasks/update")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateTask(string publicId,
+        [Bind(Prefix = "EditTask")] EditTaskFormModel form,
+        CancellationToken cancellationToken)
+    {
+        return await SaveTaskChangeAsync(publicId, form, delete: false, cancellationToken);
+    }
+
+    [HttpPost("/boards/{publicId}/tasks/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteTask(string publicId,
+        Guid taskId, string rowVersion, CancellationToken cancellationToken)
+    {
+        return await SaveTaskChangeAsync(publicId,
+            new EditTaskFormModel { TaskItemId = taskId, RowVersion = rowVersion },
+            delete: true, cancellationToken);
+    }
+
+    private async Task<IActionResult> SaveTaskChangeAsync(string publicId,
+        EditTaskFormModel form, bool delete, CancellationToken cancellationToken)
+    {
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+            return RedirectToAction(nameof(HomeController.Index), "Home");
+
+        var board = await boardService.GetAsync(publicId, guest.Id, cancellationToken);
+        var task = board?.Tasks.SingleOrDefault(item => item.TaskItemId == form.TaskItemId);
+        if (board is null || task is null)
+            return NotFound();
+
+        if (!delete)
+        {
+            if (!board.Columns.Any(column => column.BoardColumnId == form.BoardColumnId))
+                ModelState.AddModelError("EditTask.BoardColumnId", text["TaskColumnValidation"]);
+            if (string.IsNullOrWhiteSpace(form.Title) || form.Title.Trim().Length > 60)
+                ModelState.AddModelError("EditTask.Title", text["TaskTitleValidation"]);
+            if (form.DescriptionMarkdown?.Length > 20_000)
+                ModelState.AddModelError("EditTask.DescriptionMarkdown", text["TaskDescriptionValidation"]);
+            if (!Enum.IsDefined(form.Priority))
+                ModelState.AddModelError("EditTask.Priority", text["TaskPriorityValidation"]);
+            if (form.AssignedToParticipantId.HasValue && !board.Participants.Any(
+                member => member.BoardParticipantId == form.AssignedToParticipantId.Value))
+                ModelState.AddModelError("EditTask.AssignedToParticipantId", text["TaskAssigneeValidation"]);
+            if (form.StartDate.HasValue && form.DueDate.HasValue
+                && form.StartDate.Value > form.DueDate.Value)
+                ModelState.AddModelError("EditTask.DueDate", text["TaskDateValidation"]);
+        }
+
+        byte[] version = [];
+        try
+        {
+            version = Convert.FromBase64String(form.RowVersion ?? string.Empty);
+            if (version.Length != 8)
+                ModelState.AddModelError(string.Empty, text["TaskEditConcurrentChange"]);
+        }
+        catch (FormatException)
+        {
+            ModelState.AddModelError(string.Empty, text["TaskEditConcurrentChange"]);
+        }
+
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var saved = delete
+                    ? await taskService.DeleteAsync(publicId, guest.Id, task.TaskItemId,
+                        version, cancellationToken)
+                    : await taskService.UpdateAsync(publicId, guest.Id, task.TaskItemId,
+                        new UpdateTaskRequestModel(form.BoardColumnId, form.Title, form.DescriptionMarkdown,
+                            form.Priority, form.AssignedToParticipantId, form.StartDate, form.DueDate),
+                        version, cancellationToken);
+
+                return saved ? RedirectToAction(nameof(Index), new { publicId }) : NotFound();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+            catch (ArgumentException)
+            {
+                ModelState.AddModelError(string.Empty, text["TaskInvalidDetails"]);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                ModelState.AddModelError(string.Empty, text["TaskEditConcurrentChange"]);
+            }
+        }
+
+        if (delete)
+        {
+            form = MapEditTask(task);
+            // Preserve the submitted version so a stale delete cannot be silently retried.
+            form.RowVersion = Convert.ToBase64String(version);
+        }
+
+        var navigationBoards = await boardService.GetListBySessionIdAsync(guest.Id, cancellationToken);
+        var page = MapPage(board, navigationBoards, guest,
+            !string.IsNullOrWhiteSpace(boardOwnerCookieService.GetToken(publicId))) with
+        {
+            EditTask = form,
+            ShowEditTaskDialog = true
+        };
+        return View("Index", page);
+    }
+
+    private static EditTaskFormModel MapEditTask(BoardTaskModel task) => new()
+    {
+        TaskItemId = task.TaskItemId,
+        BoardColumnId = task.BoardColumnId,
+        RowVersion = Convert.ToBase64String(task.RowVersion),
+        Title = task.Title,
+        DescriptionMarkdown = task.DescriptionMarkdown,
+        Priority = task.Priority,
+        AssignedToParticipantId = task.AssignedToParticipantId,
+        StartDate = task.StartDate,
+        DueDate = task.DueDate
+    };
+
     private async Task<GuestResponseModel?> GetCurrentGuestAsync(
         CancellationToken cancellationToken)
     {
@@ -321,6 +456,7 @@ public sealed class BoardsController(
         };
 
         return new BoardTaskCardViewModel(
+            task.TaskItemId,
             task.Title,
             CreateCardDescription(task.DescriptionMarkdown),
             priorityText,

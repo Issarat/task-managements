@@ -142,4 +142,11 @@
   <data name="TaskInvalidDate" xml:space="preserve"><value>กรุณาระบุวันที่ที่ถูกต้อง</value></data>
   <data name="TaskDefaultColumn" xml:space="preserve"><value>Backlog</value></data>
   <data name="TaskBacklogMissing" xml:space="preserve"><value>ไม่พบคอลัมน์ Backlog ในบอร์ดนี้ จึงไม่สามารถเพิ่มงานได้</value></data>
+  <data name="TaskEditTitle" xml:space="preserve"><value>แก้ไข Task</value></data>
+  <data name="TaskEditDescription" xml:space="preserve"><value>แก้ไขรายละเอียดและผู้รับผิดชอบของงาน</value></data>
+  <data name="TaskDelete" xml:space="preserve"><value>ลบงาน</value></data>
+  <data name="TaskDeleteConfirmation" xml:space="preserve"><value>ต้องการลบงาน “{0}” ใช่ไหม? การลบนี้ไม่สามารถย้อนกลับได้</value></data>
+  <data name="TaskDeleteConfirm" xml:space="preserve"><value>ยืนยันลบงาน</value></data>
+  <data name="TaskOpenLabel" xml:space="preserve"><value>เปิดรายละเอียดและแก้ไขงาน {0}</value></data>
+  <data name="TaskEditConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง กรุณาปิดหน้าต่างแล้วเปิดงานใหม่เพื่อโหลดข้อมูลล่าสุดก่อนบันทึกหรือลบอีกครั้ง</value></data>
 </root>

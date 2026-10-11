@@ -8,6 +8,96 @@ public sealed class TaskService(
     IBoardRepository boardRepository,
     ITaskRepository taskRepository) : ITaskService
 {
+    public async Task<bool> UpdateAsync(string publicId, Guid anonymousUserId,
+        Guid taskId, UpdateTaskRequestModel request, byte[] rowVersion,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRequest(request);
+        ValidateRowVersion(rowVersion);
+        var board = await GetParticipantBoardAsync(publicId, anonymousUserId, cancellationToken);
+        if (board is null)
+            return false;
+
+        var task = await taskRepository.GetAsync(board.Id, taskId, cancellationToken);
+        if (task is null)
+            return false;
+
+        ValidateAssignee(board, request.AssignedToParticipantId);
+        if (!board.Columns.Any(column => column.Id == request.BoardColumnId))
+            throw new ArgumentException("Column does not belong to this board.", nameof(request));
+
+        task.BoardColumnId = request.BoardColumnId;
+        task.Title = request.Title.Trim();
+        task.DescriptionMarkdown = string.IsNullOrWhiteSpace(request.DescriptionMarkdown)
+            ? null : request.DescriptionMarkdown.Trim();
+        task.Priority = request.Priority;
+        task.AssignedToParticipantId = request.AssignedToParticipantId;
+        task.StartDate = request.StartDate;
+        task.DueDate = request.DueDate;
+        task.UpdatedAtUtc = DateTime.UtcNow;
+        board.UpdatedAtUtc = task.UpdatedAtUtc;
+        board.MarkActivity(task.UpdatedAtUtc.Value);
+        await taskRepository.SaveAsync(task, rowVersion, delete: false, cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(string publicId, Guid anonymousUserId,
+        Guid taskId, byte[] rowVersion, CancellationToken cancellationToken = default)
+    {
+        ValidateRowVersion(rowVersion);
+        var board = await GetParticipantBoardAsync(publicId, anonymousUserId, cancellationToken);
+        if (board is null)
+            return false;
+
+        var task = await taskRepository.GetAsync(board.Id, taskId, cancellationToken);
+        if (task is null)
+            return false;
+
+        var now = DateTime.UtcNow;
+        board.UpdatedAtUtc = now;
+        board.MarkActivity(now);
+        await taskRepository.SaveAsync(task, rowVersion, delete: true, cancellationToken);
+        return true;
+    }
+
+    private async Task<Board?> GetParticipantBoardAsync(string publicId,
+        Guid anonymousUserId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicId);
+        var board = await boardRepository.GetByPublicIdForUpdateAsync(publicId, cancellationToken);
+        if (board is null || board.IsExpired(DateTime.UtcNow))
+            return null;
+
+        if (!board.Participants.Any(participant => participant.AnonymousUserId == anonymousUserId))
+            throw new UnauthorizedAccessException("Guest is not a board participant.");
+
+        return board;
+    }
+
+    private static void ValidateRowVersion(byte[] rowVersion)
+    {
+        if (rowVersion is null || rowVersion.Length != 8)
+            throw new ArgumentException("A valid task row version is required.", nameof(rowVersion));
+    }
+
+    private static void ValidateAssignee(Board board, Guid? participantId)
+    {
+        if (participantId.HasValue
+            && !board.Participants.Any(participant => participant.Id == participantId.Value))
+            throw new ArgumentException("Assignee does not belong to this board.");
+    }
+
+    private static void ValidateRequest(UpdateTaskRequestModel request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
+        if (request.Title.Trim().Length > 60 || request.DescriptionMarkdown?.Length > 20_000
+            || !Enum.IsDefined(request.Priority)
+            || (request.StartDate.HasValue && request.DueDate.HasValue
+                && request.StartDate.Value > request.DueDate.Value))
+            throw new ArgumentException("Invalid task details.", nameof(request));
+    }
+
     public async Task<Guid?> CreateAsync(
         string publicId,
         Guid anonymousUserId,

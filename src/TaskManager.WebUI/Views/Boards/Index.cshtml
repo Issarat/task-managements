@@ -161,7 +161,11 @@
                             @foreach (var task in column.Tasks)
                             {
                                 <article class="kanban-card">
-                                    <h3>@task.Title</h3>
+                                    <h3><a class="kanban-card__open"
+                                           asp-controller="Boards" asp-action="Index"
+                                           asp-route-publicId="@Model.PublicId"
+                                           asp-route-taskId="@task.TaskItemId"
+                                           aria-label="@Text["TaskOpenLabel", task.Title]">@task.Title</a></h3>
                                     <p>@task.Description</p>
                                     <span class="kanban-card__priority priority-@task.PriorityTone">
                                         <i aria-hidden="true"></i>
@@ -265,6 +269,108 @@
                     type="button" data-dialog-close>@Text["BoardCancel"]</button>
             <button class="board-dialog__button board-dialog__button--primary"
                     type="submit">@Text["TaskCreateSubmit"]</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="board-dialog" id="edit-task-dialog"
+        data-dialog-auto-open="@(Model.ShowEditTaskDialog ? "true" : null)"
+        aria-labelledby="edit-task-title">
+    <form class="board-dialog__form"
+          asp-controller="Boards" asp-action="UpdateTask"
+          asp-route-publicId="@Model.PublicId" method="post">
+        <input asp-for="EditTask.TaskItemId" type="hidden" />
+        <input asp-for="EditTask.RowVersion" type="hidden" />
+        <header class="board-dialog__header">
+            <div>
+                <h2 id="edit-task-title">@Text["TaskEditTitle"]</h2>
+                <p>@Text["TaskEditDescription"]</p>
+            </div>
+            <button class="board-dialog__close" type="button" data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+        <div class="board-dialog__content">
+            <div asp-validation-summary="All" class="board-form-errors" role="alert"></div>
+            <label class="board-dialog__field">
+                <span>@Text["TaskTitleLabel"] <i>*</i></span>
+                <input asp-for="EditTask.Title" maxlength="60" required
+                       placeholder="@Text["TaskTitlePlaceholder"]" data-dialog-initial-focus />
+            </label>
+            <label class="board-dialog__field">
+                <span>@Text["BoardDescriptionLabel"]</span>
+                <textarea asp-for="EditTask.DescriptionMarkdown" maxlength="20000"
+                          rows="3" placeholder="@Text["TaskDescriptionPlaceholder"]"></textarea>
+            </label>
+            <div class="board-dialog__row">
+                <label class="board-dialog__field">
+                    <span>@Text["TaskColumnLabel"]</span>
+                    <select asp-for="EditTask.BoardColumnId" required>
+                        @foreach (var column in Model.Columns)
+                        {
+                            <option value="@column.ColumnId">@column.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="board-dialog__field">
+                    <span>@Text["TaskPriorityLabel"]</span>
+                    <select asp-for="EditTask.Priority">
+                        <option value="1">@Text["BoardPriorityLow"]</option>
+                        <option value="2">@Text["BoardPriorityMedium"]</option>
+                        <option value="3">@Text["BoardPriorityHigh"]</option>
+                    </select>
+                </label>
+            </div>
+            <label class="board-dialog__field">
+                <span>@Text["TaskAssigneeLabel"]</span>
+                <select asp-for="EditTask.AssignedToParticipantId">
+                    <option value="">@Text["BoardUnassigned"]</option>
+                    @foreach (var member in Model.Members)
+                    {
+                        <option value="@member.ParticipantId">@member.DisplayName</option>
+                    }
+                </select>
+            </label>
+            <div class="board-dialog__row">
+                <label class="board-dialog__field">
+                    <span>@Text["BoardStartDate"]</span>
+                    <input asp-for="EditTask.StartDate" type="date" asp-format="{0:yyyy-MM-dd}" />
+                </label>
+                <label class="board-dialog__field">
+                    <span>@Text["BoardDueDate"]</span>
+                    <input asp-for="EditTask.DueDate" type="date" asp-format="{0:yyyy-MM-dd}" />
+                </label>
+            </div>
+        </div>
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--danger board-task-delete"
+                    type="button" data-dialog-open="delete-task-dialog">@Text["TaskDelete"]</button>
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button" data-dialog-close>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--primary"
+                    type="submit">@Text["BoardSave"]</button>
+        </footer>
+    </form>
+</dialog>
+
+<dialog class="board-dialog" id="delete-task-dialog"
+        aria-labelledby="delete-task-title" aria-describedby="delete-task-description">
+    <form class="board-dialog__form" asp-controller="Boards" asp-action="DeleteTask"
+          asp-route-publicId="@Model.PublicId" method="post">
+        <input type="hidden" name="taskId" value="@Model.EditTask.TaskItemId" />
+        <input type="hidden" name="rowVersion" value="@Model.EditTask.RowVersion" />
+        <header class="board-dialog__header">
+            <h2 id="delete-task-title">@Text["TaskDelete"]</h2>
+            <button class="board-dialog__close" type="button" data-dialog-close
+                    aria-label="@Text["BoardCloseDialog"]">×</button>
+        </header>
+        <div class="board-dialog__content">
+            <p id="delete-task-description">@Text["TaskDeleteConfirmation", Model.EditTask.Title]</p>
+        </div>
+        <footer class="board-dialog__actions">
+            <button class="board-dialog__button board-dialog__button--secondary"
+                    type="button" data-dialog-close autofocus>@Text["BoardCancel"]</button>
+            <button class="board-dialog__button board-dialog__button--danger"
+                    type="submit">@Text["TaskDeleteConfirm"]</button>
         </footer>
     </form>
 </dialog>

@@ -44,7 +44,8 @@ public sealed record BoardTaskModel(
     Guid? AssignedToParticipantId,
     Guid CreatedByParticipantId,
     DateOnly? StartDate,
-    DateOnly? DueDate);
+    DateOnly? DueDate,
+    byte[] RowVersion);
 
 public sealed record CreateBoardRequestModel(
     Guid AnonymousUserId,
