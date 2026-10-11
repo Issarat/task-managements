@@ -1,5 +1,33 @@
 # task-managements
 
+## Real-time board updates
+
+`BoardHub` checks the existing guest cookie and active board membership before
+joining `board:{publicId}`. Controllers send `BoardChanged` only after successful
+task create/update/delete/move or board update/reset. A notification failure is
+logged without undoing a committed save. No database migration is needed.
+
+The browser fetches the authenticated `/boards/{publicId}/snapshot` on changes
+and reconnects, replacing only cards, heading, members and navigation. Open
+dialogs, unsaved values and their original row versions remain unchanged.
+Refresh waits while dragging or submitting a move. Snapshot refuses expired
+sessions and never creates a guest or seeds a board.
+
+SignalR JavaScript client 10.0.0 is vendored in
+`src/TaskManager.WebUI/wwwroot/lib/microsoft/signalr/` with the upstream MIT
+license, so the deployed browser does not depend on a CDN.
+
+Regression checks (fake data, no production database access):
+
+```text
+node tests/board-realtime.checks.cjs
+dotnet run --project tests/TaskManager.Realtime.Checks
+```
+
+For a manual smoke test, open the same public board URL in two browsers and
+create, edit, delete or move a task. The other browser should update without
+F5. Keep an edit dialog open there to confirm its unsaved inputs are preserved.
+
 ## Expired demo data cleanup
 
 The app runs a cleanup once on startup and every 5 minutes while it is running.

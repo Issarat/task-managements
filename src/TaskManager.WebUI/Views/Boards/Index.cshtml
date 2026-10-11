@@ -14,7 +14,9 @@
     <link rel="stylesheet" href="~/css/board.css" asp-append-version="true" />
 }
 
-<div class="board-screen" data-board-screen>
+<div class="board-screen" data-board-screen
+     data-board-public-id="@Model.PublicId"
+     data-board-refresh-url="@Url.Action("Snapshot", "Boards", new { publicId = Model.PublicId })">
     <button class="board-sidebar-overlay"
             type="button"
             data-board-sidebar-close
@@ -557,5 +559,7 @@
 </dialog>
 
 @section Scripts {
+    <script src="~/lib/microsoft/signalr/dist/browser/signalr.js" asp-append-version="true"></script>
     <script src="~/js/board.js" asp-append-version="true"></script>
+    <script src="~/js/board-realtime.js" asp-append-version="true"></script>
 }

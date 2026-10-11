@@ -4,6 +4,7 @@ using TaskManager.Infrastructure;
 using TaskManager.WebUI.Services;
 using TaskManager.WebUI.BackgroundServices;
 using TaskManager.WebUI.Options;
+using TaskManager.WebUI.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,7 @@ builder.Services.AddOptions<ExpiredDataCleanupOptions>()
         "Cleanup BatchSize must be between 1 and 1000.")
     .ValidateOnStart();
 builder.Services.AddHostedService<ExpiredDataCleanupBackgroundService>();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -52,5 +54,6 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapHub<BoardHub>("/hubs/board");
 
 app.Run();

@@ -47,7 +47,7 @@
 
     const moveForm = document.querySelector('[data-task-move-form]');
     const moveMessage = document.querySelector('[data-task-move-error]');
-    const columns = Array.from(document.querySelectorAll('[data-column-id]'));
+    let columns = [];
     let draggedCard = null;
     let sourceColumn = null;
     let movePending = false;
@@ -70,7 +70,9 @@
         sourceColumn = null;
     };
 
-    if (moveForm instanceof HTMLFormElement) {
+    const bindDragDrop = () => {
+        columns = Array.from(document.querySelectorAll('[data-column-id]'));
+        if (!(moveForm instanceof HTMLFormElement)) return;
         document.querySelectorAll('[data-task-id]').forEach(card => {
             card.addEventListener('dragstart', event => {
                 if (movePending || !event.dataTransfer) {
@@ -128,7 +130,9 @@
                 moveForm.requestSubmit();
             });
         });
-    }
+    };
+    bindDragDrop();
+    document.addEventListener('board:refreshed', bindDragDrop);
 
     const showDialog = (dialog) => {
         if (dialog.id === 'share-board-dialog' && shareStatus) {

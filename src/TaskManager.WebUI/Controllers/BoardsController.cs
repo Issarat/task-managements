@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Localization;
 using TaskManager.Application.Exceptions;
 using TaskManager.Application.Interfaces;
@@ -7,6 +8,7 @@ using TaskManager.Domain.Enums;
 using TaskManager.Domain.Extensions;
 using TaskManager.WebUI.Models;
 using TaskManager.WebUI.Services;
+using TaskManager.WebUI.Hubs;
 
 namespace TaskManager.WebUI.Controllers;
 
@@ -16,7 +18,9 @@ public sealed class BoardsController(
     IGuestService guestService,
     IBoardService boardService,
     ITaskService taskService,
-    IStringLocalizer<SharedResource> text) : Controller
+    IStringLocalizer<SharedResource> text,
+    IHubContext<BoardHub> hubContext,
+    ILogger<BoardsController> logger) : Controller
 {
     [HttpGet("/boards")]
     [HttpGet("/boards/{publicId}")]
@@ -96,6 +100,28 @@ public sealed class BoardsController(
         return View(page);
     }
 
+    [HttpGet("/boards/{publicId}/snapshot")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Snapshot(string publicId,
+        CancellationToken cancellationToken)
+    {
+        // Background refresh must never create a new guest or join another board.
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+            return Unauthorized();
+
+        var navigation = await boardService.GetListBySessionIdAsync(guest.Id, cancellationToken);
+        if (!navigation.Any(board => board.PublicId == publicId))
+            return NotFound();
+
+        var response = await boardService.GetAsync(publicId, guest.Id, cancellationToken);
+        if (response is null)
+            return NotFound();
+
+        return View("Index", MapPage(response, navigation, guest,
+            !string.IsNullOrWhiteSpace(boardOwnerCookieService.GetToken(publicId))));
+    }
+
     [HttpPost("/boards/create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
@@ -149,9 +175,11 @@ public sealed class BoardsController(
                 new UpdateBoardRequestModel(name, description),
                 cancellationToken);
 
-            return updated is null
-                ? NotFound()
-                : RedirectToAction(nameof(Index), new { publicId });
+            if (updated is null)
+                return NotFound();
+
+            await NotifyBoardChangedAsync(publicId);
+            return RedirectToAction(nameof(Index), new { publicId });
         }
         catch (UnauthorizedAccessException)
         {
@@ -182,9 +210,11 @@ public sealed class BoardsController(
             var reset = await boardService.ResetAsync(
                 publicId, ownerToken, cancellationToken);
 
-            return reset
-                ? RedirectToAction(nameof(Index), new { publicId })
-                : NotFound();
+            if (!reset)
+                return NotFound();
+
+            await NotifyBoardChangedAsync(publicId);
+            return RedirectToAction(nameof(Index), new { publicId });
         }
         catch (UnauthorizedAccessException)
         {
@@ -239,9 +269,11 @@ public sealed class BoardsController(
                         form.AssignedToParticipantId, form.StartDate, form.DueDate),
                     cancellationToken);
 
-                return taskId.HasValue
-                    ? RedirectToAction(nameof(Index), new { publicId })
-                    : NotFound();
+                if (!taskId.HasValue)
+                    return NotFound();
+
+                await NotifyBoardChangedAsync(publicId);
+                return RedirectToAction(nameof(Index), new { publicId });
             }
             catch (ArgumentException)
             {
@@ -286,6 +318,8 @@ public sealed class BoardsController(
                 targetColumnId, version, cancellationToken);
             if (!moved)
                 return NotFound();
+
+            await NotifyBoardChangedAsync(publicId);
         }
         catch (UnauthorizedAccessException)
         {
@@ -384,7 +418,11 @@ public sealed class BoardsController(
                             form.Priority, form.AssignedToParticipantId, form.StartDate, form.DueDate),
                         version, cancellationToken);
 
-                return saved ? RedirectToAction(nameof(Index), new { publicId }) : NotFound();
+                if (!saved)
+                    return NotFound();
+
+                await NotifyBoardChangedAsync(publicId);
+                return RedirectToAction(nameof(Index), new { publicId });
             }
             catch (InvalidTaskColumnChangeException)
             {
@@ -419,6 +457,22 @@ public sealed class BoardsController(
             ShowEditTaskDialog = true
         };
         return View("Index", page);
+    }
+
+    private async Task NotifyBoardChangedAsync(string publicId)
+    {
+        // Persistence has already succeeded. A failed notification must not turn
+        // a successful save into an error or cause the user to submit it again.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        try
+        {
+            await hubContext.Clients.Group($"board:{publicId}")
+                .SendAsync("BoardChanged", publicId, timeout.Token);
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Could not notify clients about a board change.");
+        }
     }
 
     private static EditTaskFormModel MapEditTask(BoardTaskModel task) => new()
