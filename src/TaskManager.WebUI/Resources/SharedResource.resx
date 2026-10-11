@@ -154,4 +154,18 @@
   <data name="TaskDragHandle" xml:space="preserve"><value>ลากเพื่อย้ายงาน</value></data>
   <data name="TaskMoving" xml:space="preserve"><value>กำลังย้ายงาน...</value></data>
   <data name="TaskMoveConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง ระบบโหลดข้อมูลล่าสุดแล้ว กรุณาลองย้ายงานอีกครั้ง</value></data>
+  <data name="BoardShare" xml:space="preserve"><value>แชร์บอร์ด</value></data>
+  <data name="BoardShareDescription" xml:space="preserve"><value>ส่งลิงก์นี้ให้คนอื่นเข้ามาร่วมจัดการงาน</value></data>
+  <data name="BoardShareLinkLabel" xml:space="preserve"><value>ลิงก์บอร์ด</value></data>
+  <data name="BoardSharePermissions" xml:space="preserve"><value>ทุกคนที่มีลิงก์สามารถเข้าร่วม เพิ่ม แก้ไข ลบ และย้ายงานได้ แต่เฉพาะเจ้าของเท่านั้นที่จัดการและรีเซ็ตบอร์ดได้</value></data>
+  <data name="BoardShareExpiry" xml:space="preserve"><value>การแชร์หรือเข้าร่วมไม่ต่ออายุบอร์ด ลิงก์จะใช้ไม่ได้เมื่อบอร์ดหมดอายุ</value></data>
+  <data name="BoardShareCopy" xml:space="preserve"><value>คัดลอกลิงก์</value></data>
+  <data name="BoardShareCopied" xml:space="preserve"><value>คัดลอกลิงก์แล้ว</value></data>
+  <data name="BoardShareCopyFallback" xml:space="preserve"><value>คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์จากช่องด้านบน</value></data>
+  <data name="SharedBoardTitle" xml:space="preserve"><value>เข้าร่วมบอร์ด</value></data>
+  <data name="SharedBoardDescription" xml:space="preserve"><value>ร่วมเพิ่ม แก้ไข และย้ายงานในบอร์ดนี้ โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value></data>
+  <data name="JoinSharedBoard" xml:space="preserve"><value>เข้าร่วมบอร์ด</value></data>
+  <data name="SharedBoardTrialNote" xml:space="preserve"><value>ระบบจะสร้างชื่อ Guest แบบสุ่มให้คุณและเข้าบอร์ดนี้ โดยไม่สร้างบอร์ดใหม่</value></data>
+  <data name="SharedBoardUnavailableTitle" xml:space="preserve"><value>บอร์ดนี้ไม่พร้อมใช้งาน</value></data>
+  <data name="SharedBoardUnavailableDescription" xml:space="preserve"><value>ลิงก์อาจไม่ถูกต้องหรือบอร์ดหมดอายุแล้ว คุณสามารถเริ่มทดลองใช้งานเพื่อสร้างบอร์ดของคุณเองได้</value></data>
 </root>

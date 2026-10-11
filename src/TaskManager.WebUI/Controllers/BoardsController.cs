@@ -28,7 +28,20 @@ public sealed class BoardsController(
         var guest = await GetCurrentGuestAsync(cancellationToken);
         if (guest is null)
         {
-            return RedirectToAction(nameof(HomeController.Index), "Home");
+            if (string.IsNullOrWhiteSpace(publicId))
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+
+            // Opening a public link in a new browser enters that board directly.
+            // Check the board before creating any guest; joining does not seed or renew it.
+            var preview = await boardService.GetPreviewAsync(publicId, cancellationToken);
+            if (preview is null)
+                return RedirectToAction(nameof(HomeController.Index), "Home",
+                    new { boardPublicId = publicId });
+
+            var createdGuest = await guestService.GenerateGuestAsync(cancellationToken);
+            guestCookieService.SetToken(createdGuest.GuestToken,
+                new DateTimeOffset(createdGuest.Guest.ExpiresAtUtc, TimeSpan.Zero));
+            guest = createdGuest.Guest;
         }
 
         if (string.IsNullOrWhiteSpace(publicId))
@@ -125,7 +138,7 @@ public sealed class BoardsController(
         var ownerToken = boardOwnerCookieService.GetToken(publicId);
         if (string.IsNullOrWhiteSpace(ownerToken))
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden);
         }
 
         try
@@ -142,7 +155,7 @@ public sealed class BoardsController(
         }
         catch (UnauthorizedAccessException)
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden);
         }
     }
 

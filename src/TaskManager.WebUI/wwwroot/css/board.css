@@ -388,6 +388,7 @@
 
 .board-tools {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   padding-bottom: 14px;
 }
@@ -411,6 +412,35 @@
 .board-tool svg {
   width: 16px;
   height: 16px;
+}
+
+.board-tool--share {
+  color: #2563eb;
+  border-color: #93b4f8;
+}
+
+.board-tool--share:hover {
+  background: #eff6ff;
+}
+
+.board-share-note,
+.board-share-status {
+  margin: 0;
+  color: #64748b;
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.board-share-status {
+  color: #2563eb;
+}
+
+.board-share-status:empty {
+  display: none;
+}
+
+[data-share-link] {
+  direction: ltr;
 }
 
 .board-tool--edit {

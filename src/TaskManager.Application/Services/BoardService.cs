@@ -12,6 +12,17 @@ public sealed class BoardService(IBoardRepository boardRepository)
     private const int MaximumNameLength = 120;
     private const int MaximumDescriptionLength = 500;
 
+    public async Task<BoardModel?> GetPreviewAsync(string publicId,
+        CancellationToken cancellationToken = default)
+    {
+        // This public preview does not create a guest or enroll a participant.
+        if (string.IsNullOrWhiteSpace(publicId) || publicId.Length > 32)
+            return null;
+
+        var board = await boardRepository.GetByPublicIdAsync(publicId, cancellationToken);
+        return board is null || board.IsExpired(DateTime.UtcNow) ? null : MapBoard(board);
+    }
+
 
     public async Task<bool> ResetAsync(
         string publicId,

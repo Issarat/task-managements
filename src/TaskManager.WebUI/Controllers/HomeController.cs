@@ -30,16 +30,25 @@ namespace TaskManager.WebUI.Controllers
         }
         [HttpGet]
         public async Task<IActionResult> Index(
+            string? boardPublicId,
             CancellationToken cancellationToken)
         {
             try
             {
+                var sharedBoard = boardPublicId is null ? null
+                    : await _boardService.GetPreviewAsync(boardPublicId, cancellationToken);
+                HomePageViewModel CreatePage(GuestResponseModel? guest,
+                    IReadOnlyList<BoardNavigationModel> boards) => new(guest, boards)
+                    {
+                        SharedBoard = sharedBoard,
+                        SharedBoardUnavailable = boardPublicId is not null && sharedBoard is null
+                    };
                 var guestToken = _guestCookieService.GetOrCreateToken();
 
                 if (string.IsNullOrWhiteSpace(guestToken))
                 {
                     ViewBag.HasGuestCookie = false;
-                    return View(new HomePageViewModel(null, []));
+                    return View(CreatePage(null, []));
                 }
 
                 var guest = await _guestService.GetGuestByTokenAsync(
@@ -51,7 +60,7 @@ namespace TaskManager.WebUI.Controllers
                     _guestCookieService.DeleteToken();
 
                     ViewBag.HasGuestCookie = false;
-                    return View(new HomePageViewModel(null, []));
+                    return View(CreatePage(null, []));
                 }
 
                 var boards = await _boardService.GetListBySessionIdAsync(
@@ -59,7 +68,7 @@ namespace TaskManager.WebUI.Controllers
                     cancellationToken);
 
                 ViewBag.HasGuestCookie = true;
-                return View(new HomePageViewModel(guest, boards));
+                return View(CreatePage(guest, boards));
             }
             catch (Exception ex)
             {
@@ -69,34 +78,34 @@ namespace TaskManager.WebUI.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> JoinBoard(string? publicId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(publicId))
+                return BadRequest();
+
+            // Validate the board before creating a guest; never accept an external return URL.
+            var preview = await _boardService.GetPreviewAsync(publicId, cancellationToken);
+            if (preview is null)
+                return RedirectToAction(nameof(Index), new { boardPublicId = publicId });
+
+            var guest = await GetOrCreateGuestAsync(cancellationToken);
+            var board = await _boardService.GetAsync(publicId, guest.Id, cancellationToken);
+            if (board is null)
+                return RedirectToAction(nameof(Index), new { boardPublicId = publicId });
+
+            // Joining never sets the owner cookie or seeds another board.
+            return RedirectToAction("Index", "Boards", new { publicId = board.Board.PublicId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> TryDemo(
             CancellationToken cancellationToken)
         {
             try
             {
-                var guestToken = _guestCookieService.GetOrCreateToken();
-                GuestResponseModel? guest = null;
-
-                if (!string.IsNullOrWhiteSpace(guestToken))
-                {
-                    guest = await _guestService.GetGuestByTokenAsync(
-                        guestToken,
-                        cancellationToken);
-                }
-
-                if (guest is null)
-                {
-                    var createdGuest = await _guestService.GenerateGuestAsync(
-                        cancellationToken);
-
-                    _guestCookieService.SetToken(
-                        createdGuest.GuestToken,
-                        new DateTimeOffset(
-                            createdGuest.Guest.ExpiresAtUtc,
-                            TimeSpan.Zero));
-
-                    guest = createdGuest.Guest;
-                }
+                var guest = await GetOrCreateGuestAsync(cancellationToken);
 
                 var boards = await _boardService.GetListBySessionIdAsync(
                     guest.Id,
@@ -134,6 +143,20 @@ namespace TaskManager.WebUI.Controllers
                 _logger.LogError(ex, "เกิดข้อผิดพลาดขณะทำงาน");
                 throw;
             }
+        }
+
+        private async Task<GuestResponseModel> GetOrCreateGuestAsync(CancellationToken cancellationToken)
+        {
+            var token = _guestCookieService.GetOrCreateToken();
+            var guest = string.IsNullOrWhiteSpace(token) ? null
+                : await _guestService.GetGuestByTokenAsync(token, cancellationToken);
+            if (guest is not null)
+                return guest;
+
+            var created = await _guestService.GenerateGuestAsync(cancellationToken);
+            _guestCookieService.SetToken(created.GuestToken,
+                new DateTimeOffset(created.Guest.ExpiresAtUtc, TimeSpan.Zero));
+            return created.Guest;
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

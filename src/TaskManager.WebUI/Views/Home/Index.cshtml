@@ -130,10 +130,32 @@
                     @Text["PublicDemoArea"]
                 </span>
 
-                <h2 id="landing-title">@Text["HeroTitleLine1"]<br /><span>@Text["HeroTitleLine2"]</span></h2>
+                @if (Model.SharedBoard is not null)
+                {
+                    <h2 id="landing-title" class="hero__shared-title">@Text["SharedBoardTitle"]<br /><span>@Model.SharedBoard.Name</span></h2>
+                }
+                else if (Model.SharedBoardUnavailable)
+                {
+                    <h2 id="landing-title">@Text["SharedBoardUnavailableTitle"]</h2>
+                }
+                else
+                {
+                    <h2 id="landing-title">@Text["HeroTitleLine1"]<br /><span>@Text["HeroTitleLine2"]</span></h2>
+                }
                 <p class="hero__description">
-                    @Text["HeroDescriptionLine1"]<br class="desktop-only" />
-                    @Text["HeroDescriptionLine2"]
+                    @if (Model.SharedBoard is not null)
+                    {
+                        @Text["SharedBoardDescription"]
+                    }
+                    else if (Model.SharedBoardUnavailable)
+                    {
+                        @Text["SharedBoardUnavailableDescription"]
+                    }
+                    else
+                    {
+                        @Text["HeroDescriptionLine1"]<br class="desktop-only" />
+                        @Text["HeroDescriptionLine2"]
+                    }
                 </p>
 
                 <div class="hero__features" aria-label="@Text["FeatureListLabel"]">
@@ -153,19 +175,23 @@
 
                 <form class="trial-form"
                       asp-controller="Home"
-                      asp-action="TryDemo"
+                      asp-action="@(Model.SharedBoard is not null ? "JoinBoard" : "TryDemo")"
                       method="post">
+                    @if (Model.SharedBoard is not null)
+                    {
+                        <input type="hidden" name="publicId" value="@Model.SharedBoard.PublicId" />
+                    }
                     <button id="demo-btn"
                             class="primary-cta"
                             type="submit"
                             aria-describedby="trial-note">
-                        <span>@Text["StartTrial"]</span>
+                        <span>@Text[Model.SharedBoard is not null ? "JoinSharedBoard" : "StartTrial"]</span>
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M5 12h14M13 6l6 6-6 6" />
                         </svg>
                     </button>
                 </form>
-                <p class="trial-note" id="trial-note">@Text["TrialNote"]</p>
+                <p class="trial-note" id="trial-note">@Text[Model.SharedBoard is not null ? "SharedBoardTrialNote" : "TrialNote"]</p>
 
                 <aside class="demo-disclaimer" aria-label="@Text["DisclaimerLabel"]">
                     <span class="demo-disclaimer__icon" aria-hidden="true">

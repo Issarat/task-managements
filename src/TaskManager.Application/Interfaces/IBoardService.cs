@@ -4,6 +4,8 @@ namespace TaskManager.Application.Interfaces;
 
 public interface IBoardService
 {
+    Task<BoardModel?> GetPreviewAsync(string publicId,
+        CancellationToken cancellationToken = default);
 
     Task<bool> ResetAsync(
         string publicId,

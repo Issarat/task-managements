@@ -124,6 +124,11 @@
                 </div>
 
                 <div class="board-tools">
+                    <button class="board-tool board-tool--share" type="button"
+                            data-dialog-open="share-board-dialog">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 .2l3-3a5 5 0 0 0-7-7l-2 2m3 6a5 5 0 0 0-7-.2l-3 3a5 5 0 0 0 7 7l2-2" /></svg>
+                        @Text["BoardShare"]
+                    </button>
                     <button class="board-tool board-tool--edit"
                             type="button"
                             data-dialog-open="update-board-dialog"
@@ -222,6 +227,36 @@
 </div>
 
 <!------------------------- Model --------------------------->
+
+<dialog class="board-dialog" id="share-board-dialog" aria-labelledby="share-board-title">
+    <header class="board-dialog__header">
+        <div>
+            <h2 id="share-board-title">@Text["BoardShare"]</h2>
+            <p>@Text["BoardShareDescription"]</p>
+        </div>
+        <button class="board-dialog__close" type="button" data-dialog-close
+                aria-label="@Text["BoardCloseDialog"]">×</button>
+    </header>
+    <div class="board-dialog__content">
+        <label class="board-dialog__field">
+            <span>@Text["BoardShareLinkLabel"]</span>
+            <input type="text" readonly data-share-link data-dialog-initial-focus
+                   data-share-path="@Url.Action("Index", "Boards", new { publicId = Model.PublicId })"
+                   value="@Url.Action("Index", "Boards", new { publicId = Model.PublicId })" />
+        </label>
+        <p class="board-share-note">@Text["BoardSharePermissions"]</p>
+        <p class="board-share-note">@Text["BoardShareExpiry"]</p>
+        <p class="board-share-status" data-share-status role="status" aria-live="polite"
+           data-copied-message="@Text["BoardShareCopied"]"
+           data-failed-message="@Text["BoardShareCopyFallback"]"></p>
+    </div>
+    <footer class="board-dialog__actions">
+        <button class="board-dialog__button board-dialog__button--secondary" type="button"
+                data-dialog-close>@Text["BoardCloseDialog"]</button>
+        <button class="board-dialog__button board-dialog__button--primary" type="button"
+                data-share-copy>@Text["BoardShareCopy"]</button>
+    </footer>
+</dialog>
 
 <dialog class="board-dialog" id="create-task-dialog"
         data-dialog-auto-open="@(Model.ShowCreateTaskDialog ? "true" : null)"

@@ -22,6 +22,29 @@
         }
     });
 
+    const shareLink = document.querySelector('[data-share-link]');
+    const shareCopy = document.querySelector('[data-share-copy]');
+    const shareStatus = document.querySelector('[data-share-status]');
+    if (shareLink instanceof HTMLInputElement) {
+        // Share only the public board route, never the current task query or cookie tokens.
+        shareLink.value = new URL(shareLink.dataset.sharePath, window.location.origin).href;
+    }
+    shareCopy?.addEventListener('click', async () => {
+        if (!(shareLink instanceof HTMLInputElement) || !shareStatus) return;
+        shareCopy.disabled = true;
+        try {
+            if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+            await navigator.clipboard.writeText(shareLink.value);
+            shareStatus.textContent = shareStatus.dataset.copiedMessage;
+        } catch {
+            shareLink.focus();
+            shareLink.select();
+            shareStatus.textContent = shareStatus.dataset.failedMessage;
+        } finally {
+            shareCopy.disabled = false;
+        }
+    });
+
     const moveForm = document.querySelector('[data-task-move-form]');
     const moveMessage = document.querySelector('[data-task-move-error]');
     const columns = Array.from(document.querySelectorAll('[data-column-id]'));
@@ -108,6 +131,9 @@
     }
 
     const showDialog = (dialog) => {
+        if (dialog.id === 'share-board-dialog' && shareStatus) {
+            shareStatus.textContent = '';
+        }
         dialog.showModal();
 
         const initialFocus = dialog.querySelector('[data-dialog-initial-focus]');

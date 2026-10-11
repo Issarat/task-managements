@@ -811,6 +811,10 @@ svg {
   }
 }
 
+.hero__shared-title {
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
