@@ -107,6 +107,28 @@ function environment() {
         } };
 }
 
+function assigneeSelect(items, value = '') {
+    return { options: items.map(([value, textContent]) => ({ value, textContent,
+        selected: value === '', cloneNode() { return { ...this }; } })), value, focused: true,
+        replaceChildren(...options) {
+            this.options = options;
+            this.value = (options.find(option => option.selected) ?? options[0])?.value ?? '';
+        } };
+}
+
+function assignees(e, selected = 'participant-a') {
+    const ids = ['CreateTask_AssignedToParticipantId', 'EditTask_AssignedToParticipantId'];
+    const inputs = Object.fromEntries(ids.map(id => [id,
+        assigneeSelect([['', 'Unassigned'], ['participant-a', 'Guest A']], selected)]));
+    const updated = Object.fromEntries(ids.map(id => [id,
+        assigneeSelect([['', 'Unassigned'], ['participant-a', 'Guest A'],
+            ['participant-b', 'Guest B'], ['participant-offline', 'Offline guest']])]));
+    const previousLookup = e.document.getElementById;
+    e.document.getElementById = id => inputs[id] ?? previousLookup(id);
+    e.page.getElementById = id => updated[id] ?? null;
+    return { inputs, updated };
+}
+
 (async () => {
     let passed = 0;
     const check = async (name, action) => { await action(); passed++; console.log(`PASS ${name}`); };
@@ -369,6 +391,77 @@ function environment() {
         assert.equal(fields['EditBoard.Description'].value, isOpen ? 'Draft description' : 'latest-data-and-version');
         assert.equal(fields['EditBoard.RowVersion'].value, isOpen ? 'old-version' : 'latest-data-and-version');
         assert.equal(fields.rowVersion.value, isOpen ? 'old-confirmation' : 'latest-data-and-version');
+    });
+    await check('new online guest refreshes DB assignees without a task change event', async () => {
+        const e = environment(); const { inputs } = assignees(e);
+        await e.run(); await e.tick();
+        // Reset choices to the initial page so the presence event proves refresh.
+        for (const input of Object.values(inputs))
+            input.options = assigneeSelect([['', 'Unassigned'], ['participant-a', 'Guest A']]).options;
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 2,
+            members: [{ guestId: 'guest-b', displayName: 'Guest B', shortName: 'GB', avatarColor: '#123456' }] });
+        await e.tick();
+        assert.equal(e.calls.fetch, 2);
+        for (const input of Object.values(inputs)) {
+            assert.ok(input.options.some(option => option.value === 'participant-b'));
+            assert.equal(input.options.some(option => option.value === 'guest-b'), false);
+            assert.equal(input.value, 'participant-a');
+        }
+    });
+    for (const isOpen of [false, true]) await check(`assignee choices refresh with ${isOpen ? 'open' : 'closed'} dialogs without changing drafts or focus`, async () => {
+        const e = environment(); const { inputs } = assignees(e);
+        e.editDialog.open = isOpen;
+        e.editDialog.dataset.editingTaskId = '';
+        e.editDialog.title = 'Unsaved title'; e.editDialog.rowVersion = 'original-task-version';
+        e.editDialog.description = 'Unsaved description'; e.editDialog.priority = '3';
+        e.editDialog.startDate = '2026-10-13';
+        await e.run(); await e.tick();
+        for (const input of Object.values(inputs)) {
+            assert.equal(input.options.length, 4);
+            assert.equal(input.value, 'participant-a'); assert.equal(input.focused, true);
+        }
+        assert.equal(e.editDialog.open, isOpen);
+        assert.equal(e.editDialog.title, 'Unsaved title');
+        assert.equal(e.editDialog.rowVersion, 'original-task-version');
+        assert.equal(e.editDialog.description, 'Unsaved description');
+        assert.equal(e.editDialog.priority, '3'); assert.equal(e.editDialog.startDate, '2026-10-13');
+    });
+    await check('assignee selection made while snapshot is in flight is preserved', async () => {
+        const e = environment(); const { inputs } = assignees(e, '');
+        e.env.fetchHook = () => { Object.values(inputs).forEach(input => { input.value = 'participant-a'; }); };
+        await e.run(); await e.tick();
+        assert.ok(Object.values(inputs).every(input => input.value === 'participant-a'));
+    });
+    await check('offline DB members stay assignable and editing/leave events do not fetch repeatedly', async () => {
+        const e = environment(); const { inputs } = assignees(e);
+        await e.run(); await e.tick();
+        const member = { guestId: 'guest-a', displayName: 'Guest A', shortName: 'GA', avatarColor: '#123456' };
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 2, members: [member] });
+        await e.tick();
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 3, members: [member],
+            editingTasks: [{ taskItemId: 'task-1', editors: [member] }] });
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 4, members: [] });
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 5, members: [member] });
+        assert.equal(e.timers.size, 0);
+        for (const input of Object.values(inputs))
+            assert.ok(input.options.some(option => option.value === 'participant-offline'));
+    });
+    await check('missing selected assignee is kept rather than silently unassigning a draft', async () => {
+        const e = environment(); const { inputs, updated } = assignees(e);
+        for (const select of Object.values(updated)) select.options = assigneeSelect([['', 'Unassigned']]).options;
+        await e.run(); await e.tick();
+        for (const input of Object.values(inputs)) {
+            assert.equal(input.value, 'participant-a');
+            assert.ok(input.options.some(option => option.value === 'participant-a' && option.textContent === 'Guest A'));
+        }
+    });
+    await check('unassigned choices stay unassigned and stale/other-board presence does not refresh options', async () => {
+        const e = environment(); const { inputs } = assignees(e, '');
+        await e.run(); await e.tick();
+        assert.ok(Object.values(inputs).every(input => input.value === ''));
+        e.handlers.BoardPresenceChanged({ publicId: 'other-board', revision: 2, members: [{ guestId: 'other' }] });
+        e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 1, members: [{ guestId: 'stale' }] });
+        assert.equal(e.timers.size, 0);
     });
     console.log(`${passed} checks passed.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -37,6 +37,17 @@ when a connection joins or disconnects. Up to four avatars are shown, with `+N`
 and a tooltip containing the remaining names. Members used by task assignee
 fields still come from the database, including people currently offline.
 
+When a previously unseen online guest appears, the browser fetches a board
+snapshot to refresh assignee choices in both create/edit task dialogs. Options
+use persisted `BoardParticipantId` values, never the online roster's Guest IDs.
+Refresh updates only option nodes and restores the current selection, even if
+the dialog is open or the selection changed while the request was in flight.
+Draft text, dates, priority, focus and task row versions remain untouched;
+offline members stay assignable. A selected option absent from the snapshot is
+retained for server validation rather than silently clearing the assignment.
+Editing-presence events and returning tabs of known guests don't repeatedly
+fetch membership; reconnect and ordinary board changes still refresh it.
+
 Guest/board expiry removes connections from presence and their SignalR group
 within five seconds and tells the browser to stop its connection. An abrupt
 network loss is reflected once SignalR detects the disconnect, not necessarily

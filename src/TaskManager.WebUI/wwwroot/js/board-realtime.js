@@ -17,6 +17,7 @@
     let connectionErrorRetry = true;
     const onlineMembers = board.querySelector('[data-board-online-members]');
     let presenceRevision = -1;
+    const knownOnlineGuestIds = new Set();
     let editingTasks = [];
     const editDialog = document.getElementById('edit-task-dialog');
     let joined = false;
@@ -70,6 +71,11 @@
         editingTasks = Array.isArray(snapshot.editingTasks) ? snapshot.editingTasks : [];
         renderEditingTasks();
         const members = [...new Map(snapshot.members.map(member => [member.guestId, member])).values()];
+        // An online Guest ID is not an assignee's BoardParticipant ID. Fetch
+        // the authoritative DB membership/options when a new guest appears.
+        const hasNewMember = members.some(member => !knownOnlineGuestIds.has(member.guestId));
+        members.forEach(member => knownOnlineGuestIds.add(member.guestId));
+        if (hasNewMember) invalidateBoard();
         const avatars = members.slice(0, 4).map(member => {
             const avatar = document.createElement('span');
             avatar.className = 'board-member-avatar';
@@ -161,6 +167,26 @@
         }
     };
 
+    const refreshAssigneeOptions = (page) => {
+        for (const id of ['CreateTask_AssignedToParticipantId', 'EditTask_AssignedToParticipantId']) {
+            const current = document.getElementById(id);
+            const updated = page.getElementById(id);
+            if (!current || !updated) continue;
+
+            // Update choices, not the select/dialog itself. Keep the selection
+            // at response time, focus, all draft fields and the task row version.
+            const selectedValue = current.value;
+            const selectedOption = Array.from(current.options).find(option => option.value === selectedValue);
+            const options = Array.from(updated.options, option => option.cloneNode(true));
+            // Never silently unassign a draft if its selected value is missing
+            // from a newer snapshot. Server validation still decides validity.
+            if (selectedValue && selectedOption && !options.some(option => option.value === selectedValue))
+                options.push(selectedOption.cloneNode(true));
+            current.replaceChildren(...options);
+            current.value = selectedValue;
+        }
+    };
+
     const refreshBoard = async () => {
         if (disposed || !refreshNeeded || refreshing) return;
         // Never replace a card during a drag or while a move is submitting.
@@ -205,6 +231,7 @@
             }
             document.title = page.title;
             refreshClosedBoardDialogs(page);
+            refreshAssigneeOptions(page);
             document.dispatchEvent(new Event('board:refreshed'));
         } catch (error) {
             console.error('Board refresh failed', error);
