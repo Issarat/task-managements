@@ -152,7 +152,10 @@ public sealed class BoardService(IBoardRepository boardRepository)
             now,
             cancellationToken);
 
-        if (participantAdded)
+        // A concurrent join may return false because another request inserted
+        // the member, while our earlier snapshot still has no such participant.
+        if (participantAdded || !board.Participants.Any(
+            participant => participant.AnonymousUserId == anonymousUserId))
         {
             board = await boardRepository.GetByPublicIdAsync(
                 publicId,

@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using TaskManager.Application.Interfaces;
 using TaskManager.Domain.Entities;
 using TaskManager.Infrastructure.Persistence;
@@ -102,18 +103,36 @@ internal sealed class BoardRepository(ApplicationDbContext dbContext)
             return false;
         }
 
-        await dbContext.BoardParticipants.AddAsync(
-            new BoardParticipant
-            {
-                BoardId = boardId,
-                AnonymousUserId = anonymousUserId,
-                JoinedAtUtc = joinedAtUtc,
-                LastSeenAtUtc = joinedAtUtc
-            },
-            cancellationToken);
+        var participant = new BoardParticipant
+        {
+            BoardId = boardId,
+            AnonymousUserId = anonymousUserId,
+            JoinedAtUtc = joinedAtUtc,
+            LastSeenAtUtc = joinedAtUtc
+        };
+        await dbContext.BoardParticipants.AddAsync(participant, cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is SqlException { Number: 2601 or 2627 }
+            && exception.Entries.Count == 1
+            && ReferenceEquals(exception.Entries[0].Entity, participant))
+        {
+            // Another tab can insert this membership after our existence read.
+            // A failed INSERT remains Added in EF; detach only our attempted row.
+            dbContext.Entry(participant).State = EntityState.Detached;
+            var joinedByAnotherRequest = await dbContext.BoardParticipants.AnyAsync(
+                item => item.BoardId == boardId && item.AnonymousUserId == anonymousUserId,
+                cancellationToken);
+            if (!joinedByAnotherRequest)
+                throw;
+
+            return false;
+        }
     }
 
     public Task SaveAsync(Board board, byte[] rowVersion,

@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using TaskManager.Application.Interfaces;
 using TaskManager.Application.Models;
 using TaskManager.Application.Services;
@@ -29,6 +30,8 @@ var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<str
 var hostBuilder = Host.CreateApplicationBuilder();
 hostBuilder.Logging.ClearProviders();
 hostBuilder.Services.AddInfrastructure(config);
+var joinBarrier = new ParticipantJoinBarrier();
+hostBuilder.Services.AddDbContext<ApplicationDbContext>(options => options.AddInterceptors(joinBarrier));
 using var host = hostBuilder.Build();
 var provider = host.Services;
 var passed = 0;
@@ -65,6 +68,85 @@ try
             new(guest.Id, "Concurrency test", null, guest.ExpiresAtUtc));
     });
     var id = created.Board.PublicId;
+    var joinBoard = await InScope(sp => new BoardService(sp.GetRequiredService<IBoardRepository>()).CreateAsync(
+        new(guest.Id, "Concurrent joins", null, guest.ExpiresAtUtc)));
+    async Task<AnonymousUser> JoinGuest(char hashCharacter)
+    {
+        var joiningGuest = new AnonymousUser { SessionTokenHash = new string(hashCharacter, 64),
+            DisplayName = "Joining guest " + hashCharacter, AvatarColor = "#654321",
+            ExpiresAtUtc = guest.ExpiresAtUtc };
+        await InScope(async sp =>
+        {
+            await sp.GetRequiredService<IAnonymousUserRepository>().AddAsync(joiningGuest);
+            return true;
+        });
+        return joiningGuest;
+    }
+    var joining = await JoinGuest('b');
+    joinBarrier.Arm(joinBoard.Board.BoardId, joining.Id);
+    var joins = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => InScope(async sp =>
+    {
+        var added = await sp.GetRequiredService<IBoardRepository>().AddParticipantIfMissingAsync(
+            joinBoard.Board.BoardId, joining.Id, DateTime.UtcNow);
+        var db = sp.GetRequiredService<ApplicationDbContext>();
+        // A handled duplicate must not remain Added and break the next SaveChanges.
+        var noPendingInsert = !db.ChangeTracker.Entries<BoardParticipant>()
+            .Any(entry => entry.State == EntityState.Added);
+        return (added, noPendingInsert, savedAgain: await db.SaveChangesAsync());
+    })));
+    Check(joinBarrier.SaveAttempts == 2 && joins.Count(result => result.added) == 1,
+        "both first-time joins attempt INSERT and exactly one adds the membership without an error");
+    Check(joins.All(result => result.noPendingInsert && result.savedAgain == 0),
+        "duplicate join detaches its failed insert so later saves do not retry it");
+    Check(await InScope(sp => sp.GetRequiredService<ApplicationDbContext>().BoardParticipants.CountAsync(
+        participant => participant.BoardId == joinBoard.Board.BoardId && participant.AnonymousUserId == joining.Id)) == 1,
+        "simultaneous tabs persist exactly one membership");
+    var repeated = await InScope(sp => sp.GetRequiredService<IBoardRepository>().AddParticipantIfMissingAsync(
+        joinBoard.Board.BoardId, joining.Id, DateTime.UtcNow));
+    Check(!repeated, "a later repeated join is idempotent");
+
+    var serviceGuest = await JoinGuest('c');
+    joinBarrier.Arm(joinBoard.Board.BoardId, serviceGuest.Id);
+    var pages = await Task.WhenAll(Enumerable.Range(0, 2).Select(_ => Read(joinBoard.Board.PublicId, serviceGuest.Id)));
+    Check(joinBarrier.SaveAttempts == 2 && pages.All(page => page.Participants.Count(
+        participant => participant.AnonymousUserId == serviceGuest.Id) == 1)
+        && pages[0].Participants.Single(participant => participant.AnonymousUserId == serviceGuest.Id).BoardParticipantId
+            == pages[1].Participants.Single(participant => participant.AnonymousUserId == serviceGuest.Id).BoardParticipantId,
+        "both racing board requests return the actual persisted member, including the losing request");
+    var foreignKeyRejected = false;
+    try
+    {
+        await InScope(sp => sp.GetRequiredService<IBoardRepository>().AddParticipantIfMissingAsync(
+            Guid.NewGuid(), joining.Id, DateTime.UtcNow));
+    }
+    catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 547 })
+    {
+        foreignKeyRejected = true;
+    }
+    Check(foreignKeyRejected, "non-duplicate SQL errors are not swallowed as successful joins");
+
+    var collisionGuest = await JoinGuest('d');
+    var ownerParticipantId = (await Read(joinBoard.Board.PublicId, guest.Id)).Participants
+        .Single(participant => participant.AnonymousUserId == guest.Id).BoardParticipantId;
+    joinBarrier.ForceKeyCollision(collisionGuest.Id, ownerParticipantId);
+    var unrelatedDuplicateRejected = false;
+    try
+    {
+        await InScope(sp => sp.GetRequiredService<IBoardRepository>().AddParticipantIfMissingAsync(
+            joinBoard.Board.BoardId, collisionGuest.Id, DateTime.UtcNow));
+    }
+    catch (DbUpdateException exception) when (
+        exception.InnerException is SqlException { Number: 2601 or 2627 })
+    {
+        unrelatedDuplicateRejected = true;
+    }
+    Check(unrelatedDuplicateRejected,
+        "duplicate keys unrelated to the exact board/guest pair are still rejected");
+    Check(await InScope(sp => sp.GetRequiredService<ApplicationDbContext>().BoardParticipants.CountAsync(
+        participant => participant.BoardId == joinBoard.Board.BoardId
+            && participant.AnonymousUserId == collisionGuest.Id)) == 0,
+        "a rejected key collision does not falsely create or report a membership");
+
     var first = (await InScope(sp => Tasks(sp).CreateAsync(id, guest.Id,
         new("First", null, TaskPriority.Low, null, null, null))))!.Value;
     var second = (await InScope(sp => Tasks(sp).CreateAsync(id, guest.Id,
@@ -175,6 +257,46 @@ sealed class TwoReaderGate
     {
         if (Interlocked.Increment(ref arrived) == 2) ready.TrySetResult();
         await ready.Task.WaitAsync(TimeSpan.FromSeconds(15), cancellationToken);
+    }
+}
+sealed class ParticipantJoinBarrier : SaveChangesInterceptor
+{
+    Guid boardId;
+    Guid guestId;
+    TwoReaderGate gate = new();
+    int saveAttempts;
+    Guid collisionGuestId;
+    Guid collisionParticipantId;
+    public int SaveAttempts => Volatile.Read(ref saveAttempts);
+    public void Arm(Guid targetBoardId, Guid targetGuestId)
+    {
+        boardId = targetBoardId;
+        guestId = targetGuestId;
+        gate = new();
+        saveAttempts = 0;
+    }
+    public void ForceKeyCollision(Guid targetGuestId, Guid existingParticipantId)
+    {
+        collisionGuestId = targetGuestId;
+        collisionParticipantId = existingParticipantId;
+    }
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData, InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in eventData.Context!.ChangeTracker.Entries<BoardParticipant>().Where(entry =>
+            entry.State == EntityState.Added && entry.Entity.AnonymousUserId == collisionGuestId))
+            entry.Property(participant => participant.Id).CurrentValue = collisionParticipantId;
+
+        if (eventData.Context!.ChangeTracker.Entries<BoardParticipant>().Any(entry =>
+            entry.State == EntityState.Added && entry.Entity.BoardId == boardId
+                && entry.Entity.AnonymousUserId == guestId))
+        {
+            Interlocked.Increment(ref saveAttempts);
+            // Both existence reads have completed before either SQL INSERT is sent.
+            await gate.Arrive(cancellationToken);
+        }
+        return result;
     }
 }
 sealed class GatedTaskRepository(ITaskRepository inner, TwoReaderGate gate) : ITaskRepository

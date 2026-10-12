@@ -71,6 +71,17 @@ online presence, abrupt network loss clears once SignalR detects it.
 
 ## Row-version concurrency
 
+First-time board membership is safe across simultaneous tabs. The unique
+board/guest index remains the final authority. If another request wins the
+INSERT, the repository handles only a duplicate-key failure on its attempted
+participant, detaches that failed insert, and confirms the exact membership
+exists. Other SQL failures are not treated as successful joins. Board reads
+reload when their initial snapshot did not yet contain the joining guest, so
+both requests return the same persisted participant. No migration is required.
+
+The SQL regression runner synchronizes two requests after both existence checks
+but before their INSERTs, covering the actual race rather than relying on timing.
+
 Task mutations compare only the submitted task's SQL Server `RowVersion`.
 Board activity is updated separately inside the same transaction, without
 comparing a previously loaded board version. The board write lock is acquired
