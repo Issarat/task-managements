@@ -1,6 +1,11 @@
 **/.classpath
 **/.dockerignore
 **/.env
+**/.env.*
+**/*.pfx
+**/*.pem
+**/secrets.json
+.local-docker/
 **/.git
 **/.gitignore
 **/.project

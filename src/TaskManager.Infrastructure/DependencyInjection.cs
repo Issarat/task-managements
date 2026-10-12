@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,18 @@ public static class DependencyInjection
                 connectionString,
                 sqlOptions => sqlOptions.MigrationsAssembly(
                     typeof(ApplicationDbContext).Assembly.FullName)));
+
+        // Opt-in for ephemeral hosts. Apply the key-table migration before enabling.
+        // The default Windows development configuration is unchanged.
+        if (!bool.TryParse(configuration["DataProtection:PersistKeysToDatabase"] ?? "false",
+            out var persistKeysToDatabase))
+            throw new InvalidOperationException("DataProtection:PersistKeysToDatabase must be true or false.");
+        if (persistKeysToDatabase)
+        {
+            services.AddDataProtection()
+                .SetApplicationName("TaskFlow")
+                .PersistKeysToDbContext<ApplicationDbContext>();
+        }
 
         services.AddScoped<IAnonymousUserRepository, AnonymousUserRepository>();
         services.AddScoped<IBoardRepository, BoardRepository>();

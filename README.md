@@ -185,6 +185,37 @@ For a manual check, open one public board URL in two different browsers. Add,
 edit or move a task, verify the other browser updates, then keep an edit dialog
 open while another guest changes the task and confirm the draft is retained.
 
+### Docker smoke test (Windows)
+
+With Docker Desktop running Linux containers, PowerShell 7 and a trusted
+localhost development certificate, run from the repository root:
+
+```powershell
+docker build -f src/TaskManager.WebUI/Dockerfile -t taskflow:local .
+pwsh -File tests/docker-smoke.ps1
+pwsh -File tests/docker-smoke.ps1 -RenderProxy
+```
+
+This starts the production image on a temporary loopback HTTPS port and checks
+the landing page, static assets, Thai date formatting, SignalR negotiation,
+an actual WebSocket handshake and rejection of unauthenticated board joins.
+The exported certificate is mounted read-only, not copied into the image.
+The test stops its container and removes its temporary certificate afterwards.
+
+**Scope:** no database is connected and expiry cleanup is disabled. This does
+not test guest creation, task CRUD or synchronization between board members.
+Those require a reachable SQL Server database and applied migrations; the
+Windows integrated-authentication development connection string cannot be
+used unchanged inside the Linux container.
+
+## Deployment
+
+Deployment preparation targets a Free Docker Web Service on Render and a separate
+SQL Server database on MonsterASP.NET. See the [step-by-step deployment guide](documents/deploy-render.md)
+and `render.yaml`. Apply migrations before deployment and keep the real connection
+string in Render environment variables, never in Git. The cloud connection and
+redeploy/key persistence still need verification against the actual services.
+
 ## Design Decisions
 
 - **Optimistic concurrency:** SQL Server `rowversion` rejects stale task writes.
@@ -214,13 +245,14 @@ open while another guest changes the task and confirm the draft is retained.
   confirmation can therefore require reloading and reviewing the latest data.
 - Task descriptions store Markdown source, but a rendered/sanitized GitHub-style
   Markdown preview is not implemented. Cards show a short plain-text preview.
-- The Dockerfile packages WebUI only: a SQL Server database, migrations, HTTPS
-  proxy settings and persistent Data Protection keys require deployment setup.
+- The Dockerfile packages WebUI only: an external SQL Server database and applied
+  migrations are required. Render proxy handling and SQL-backed Data Protection
+  keys are opt-in deployment settings; see the deployment guide for their security limits.
 
 ## Roadmap
 
-- [ ] Complete Docker deployment configuration for the planned Render host,
-  including external database access, trusted proxy settings and persistent keys.
+- [ ] Complete the first Render deployment and verify the external SQL connection
+  and Data Protection key persistence across redeploys.
 - [ ] Fix drag/drop pending-state restoration after browser Back/Forward cache navigation.
 - [ ] Add request throttling and demo data quotas before wider public exposure.
 - [ ] Add CI automation for the regression checks.

@@ -1,0 +1,26 @@
+# Review documents/deploy-render.md and migrate the MonsterASP.NET SQL database first.
+# No database, persistent disk or paid service is created by this Blueprint.
+services:
+  - type: web
+    name: taskflow-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./src/TaskManager.WebUI/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: "8080"
+      - key: ASPNETCORE_HTTP_PORTS
+        value: "8080"
+      - key: ASPNETCORE_HTTPS_PORT
+        value: "443"
+      - key: Hosting__BehindReverseProxy
+        value: "true"
+      - key: DataProtection__PersistKeysToDatabase
+        value: "true"
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
