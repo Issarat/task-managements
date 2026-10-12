@@ -157,40 +157,74 @@ public sealed class BoardsController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(
         string publicId,
-        string name,
-        string? description,
+        [Bind(Prefix = "EditBoard")] EditBoardFormModel form,
         CancellationToken cancellationToken)
     {
+        var guest = await GetCurrentGuestAsync(cancellationToken);
+        if (guest is null)
+            return RedirectToAction(nameof(HomeController.Index), "Home");
         var ownerToken = boardOwnerCookieService.GetToken(publicId);
         if (string.IsNullOrWhiteSpace(ownerToken))
         {
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        try
-        {
-            var updated = await boardService.UpdateAsync(
-                publicId,
-                ownerToken,
-                new UpdateBoardRequestModel(name, description),
-                cancellationToken);
+        if (string.IsNullOrWhiteSpace(form.Name) || form.Name.Trim().Length > 120)
+            ModelState.AddModelError("EditBoard.Name", text["BoardNameValidation"]);
+        if (form.Description?.Length > 500)
+            ModelState.AddModelError("EditBoard.Description", text["BoardDescriptionValidation"]);
+        var conflict = !TryReadBoardVersion(form.RowVersion, out var version);
+        if (conflict)
+            ModelState.AddModelError(string.Empty, text["BoardConcurrentChange"]);
 
-            if (updated is null)
-                return NotFound();
-
-            await NotifyBoardChangedAsync(publicId);
-            return RedirectToAction(nameof(Index), new { publicId });
-        }
-        catch (UnauthorizedAccessException)
+        if (ModelState.IsValid)
         {
-            return StatusCode(StatusCodes.Status403Forbidden);
+            try
+            {
+                var updated = await boardService.UpdateAsync(
+                    publicId,
+                    ownerToken,
+                    new UpdateBoardRequestModel(form.Name, form.Description, version),
+                    cancellationToken);
+
+                if (updated is null)
+                    return NotFound();
+
+                await NotifyBoardChangedAsync(publicId);
+                return RedirectToAction(nameof(Index), new { publicId });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden);
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+            {
+                conflict = true;
+                ModelState.AddModelError(string.Empty, text["BoardConcurrentChange"]);
+            }
+            catch (ArgumentException)
+            {
+                ModelState.AddModelError(string.Empty, text["BoardInvalidDetails"]);
+            }
         }
+
+        var board = await boardService.GetAsync(publicId, guest.Id, cancellationToken);
+        if (board is null)
+            return NotFound();
+        var navigation = await boardService.GetListBySessionIdAsync(guest.Id, cancellationToken);
+        // Preserve the draft AND its original version. Never silently rebase it.
+        var page = MapPage(board, navigation, guest, canManage: true) with
+        {
+            EditBoard = form, ShowEditBoardDialog = true, BoardConflict = conflict
+        };
+        return View("Index", page);
     }
 
     [HttpPost("/boards/{publicId}/reset")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Reset(
         string publicId,
+        string? rowVersion,
         CancellationToken cancellationToken)
     {
         var guest = await GetCurrentGuestAsync(cancellationToken);
@@ -205,10 +239,15 @@ public sealed class BoardsController(
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
+        if (!ModelState.IsValid || !TryReadBoardVersion(rowVersion, out var version))
+        {
+            TempData["BoardChangeError"] = text["BoardResetConcurrentChange"].Value;
+            return RedirectToAction(nameof(Index), new { publicId });
+        }
         try
         {
             var reset = await boardService.ResetAsync(
-                publicId, ownerToken, cancellationToken);
+                publicId, ownerToken, version, cancellationToken);
 
             if (!reset)
                 return NotFound();
@@ -220,6 +259,22 @@ public sealed class BoardsController(
         {
             return StatusCode(StatusCodes.Status403Forbidden);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException)
+        {
+            TempData["BoardChangeError"] = text["BoardResetConcurrentChange"].Value;
+            return RedirectToAction(nameof(Index), new { publicId });
+        }
+    }
+
+    private static bool TryReadBoardVersion(string? value, out byte[] version)
+    {
+        version = [];
+        try
+        {
+            version = Convert.FromBase64String(value ?? string.Empty);
+            return version.Length == 8;
+        }
+        catch (FormatException) { return false; }
     }
 
 
@@ -553,7 +608,16 @@ public sealed class BoardsController(
                     board.PublicId == response.Board.PublicId))
                 .ToArray(),
             members,
-            columns);
+            columns)
+        {
+            BoardRowVersion = Convert.ToBase64String(response.Board.RowVersion),
+            EditBoard = new EditBoardFormModel
+            {
+                Name = response.Board.Name,
+                Description = response.Board.Description,
+                RowVersion = Convert.ToBase64String(response.Board.RowVersion)
+            }
+        };
     }
 
     private BoardTaskCardViewModel MapTask(

@@ -28,8 +28,6 @@ public sealed class TaskService(
 
         task.BoardColumnId = targetColumnId;
         task.UpdatedAtUtc = DateTime.UtcNow;
-        board.UpdatedAtUtc = task.UpdatedAtUtc;
-        board.MarkActivity(task.UpdatedAtUtc.Value);
         await taskRepository.SaveAsync(task, rowVersion, delete: false, cancellationToken);
         return true;
     }
@@ -60,8 +58,6 @@ public sealed class TaskService(
         task.StartDate = request.StartDate;
         task.DueDate = request.DueDate;
         task.UpdatedAtUtc = DateTime.UtcNow;
-        board.UpdatedAtUtc = task.UpdatedAtUtc;
-        board.MarkActivity(task.UpdatedAtUtc.Value);
         await taskRepository.SaveAsync(task, rowVersion, delete: false, cancellationToken);
         return true;
     }
@@ -78,9 +74,6 @@ public sealed class TaskService(
         if (task is null)
             return false;
 
-        var now = DateTime.UtcNow;
-        board.UpdatedAtUtc = now;
-        board.MarkActivity(now);
         await taskRepository.SaveAsync(task, rowVersion, delete: true, cancellationToken);
         return true;
     }
@@ -195,8 +188,6 @@ public sealed class TaskService(
             CreatedAtUtc = now
         };
 
-        board.UpdatedAtUtc = now;
-        board.MarkActivity(now);
         await taskRepository.AddAsync(board, task, cancellationToken);
         return task.Id;
     }

@@ -10,6 +10,7 @@ public interface IBoardService
     Task<bool> ResetAsync(
         string publicId,
         string ownerToken,
+        byte[] rowVersion,
         CancellationToken cancellationToken = default);
 
     Task<CreatedBoardModel> CreateAsync(

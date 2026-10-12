@@ -16,6 +16,10 @@ public sealed record BoardPageViewModel(
     public bool ShowCreateTaskDialog { get; init; }
     public EditTaskFormModel EditTask { get; init; } = new();
     public bool ShowEditTaskDialog { get; init; }
+    public string BoardRowVersion { get; init; } = string.Empty;
+    public EditBoardFormModel EditBoard { get; init; } = new();
+    public bool ShowEditBoardDialog { get; init; }
+    public bool BoardConflict { get; init; }
 }
 
 public sealed record BoardNavigationViewModel(

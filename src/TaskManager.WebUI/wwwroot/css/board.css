@@ -636,6 +636,12 @@
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.1);
 }
 
+.kanban-card.is-being-edited,
+.kanban-card.is-being-edited:has(.kanban-card__open:hover) {
+  border-color: var(--task-editor-color, #8b5cf6);
+  box-shadow: 0 0 0 1px var(--task-editor-color, #8b5cf6);
+}
+
 .kanban-card__open:focus-visible {
   outline: none;
 }

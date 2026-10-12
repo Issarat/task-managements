@@ -16,6 +16,7 @@
 
 <div class="board-screen" data-board-screen
      data-board-public-id="@Model.PublicId"
+     data-task-editing-hint="@Text["TaskEditingBy"]"
      data-board-refresh-url="@Url.Action("Snapshot", "Boards", new { publicId = Model.PublicId })">
     <button class="board-sidebar-overlay"
             type="button"
@@ -143,6 +144,10 @@
                 </div>
             </div>
             <p class="board-drag-hint">@Text["TaskDragHint"]</p>
+            @if (TempData["BoardChangeError"] is string boardChangeError)
+            {
+                <p class="board-move-error" role="alert">@boardChangeError</p>
+            }
             <p class="board-move-error" data-task-move-error role="alert"
                hidden="@(TempData["TaskMoveError"] is null)">@TempData["TaskMoveError"]</p>
             <form asp-controller="Boards" asp-action="MoveTask"
@@ -323,6 +328,7 @@
 </dialog>
 
 <dialog class="board-dialog" id="edit-task-dialog"
+        data-editing-task-id="@Model.EditTask.TaskItemId"
         data-dialog-auto-open="@(Model.ShowEditTaskDialog ? "true" : null)"
         aria-labelledby="edit-task-title">
     <form class="board-dialog__form"
@@ -473,12 +479,14 @@
     </form>
 </dialog>
 
-<dialog class="board-dialog" id="update-board-dialog">
+<dialog class="board-dialog" id="update-board-dialog"
+        data-dialog-auto-open="@(Model.ShowEditBoardDialog ? "true" : null)">
     <form class="board-dialog__form"
           asp-controller="Boards"
           asp-action="Update"
           asp-route-publicId="@Model.PublicId"
           method="post">
+        <input asp-for="EditBoard.RowVersion" type="hidden" />
         <header class="board-dialog__header">
             <div>
                 <h2>@Text["BoardManage"]</h2>
@@ -491,11 +499,14 @@
         </header>
 
         <div class="board-dialog__content">
+            @if (Model.ShowEditBoardDialog)
+            {
+                <div asp-validation-summary="All" class="board-dialog__validation" role="alert"></div>
+            }
             <label class="board-dialog__field">
                 <span>@Text["BoardNameLabel"] <i>*</i></span>
-                <input name="name"
+                <input asp-for="EditBoard.Name"
                        type="text"
-                       value="@Model.Name"
                        maxlength="120"
                        required
                        autocomplete="off"
@@ -504,13 +515,18 @@
 
             <label class="board-dialog__field">
                 <span>@Text["BoardDescriptionLabel"]</span>
-                <textarea name="description"
+                <textarea asp-for="EditBoard.Description"
                           maxlength="500"
-                          rows="3">@Model.Description</textarea>
+                          rows="3"></textarea>
             </label>
         </div>
 
         <footer class="board-dialog__actions">
+            @if (Model.BoardConflict)
+            {
+                <a class="board-dialog__button board-dialog__button--secondary"
+                   asp-controller="Boards" asp-action="Index" asp-route-publicId="@Model.PublicId">@Text["BoardReload"]</a>
+            }
             <button class="board-dialog__button board-dialog__button--secondary"
                     type="button"
                     data-dialog-close>@Text["BoardCancel"]</button>
@@ -528,6 +544,7 @@
           asp-action="Reset"
           asp-route-publicId="@Model.PublicId"
           method="post">
+        <input type="hidden" name="rowVersion" value="@Model.BoardRowVersion" />
         <header class="board-dialog__header">
             <h2 id="reset-board-title">@Text["BoardReset"]</h2>
             <button type="button"

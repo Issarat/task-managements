@@ -17,10 +17,48 @@
     let connectionErrorRetry = true;
     const onlineMembers = board.querySelector('[data-board-online-members]');
     let presenceRevision = -1;
+    let editingTasks = [];
+    const editDialog = document.getElementById('edit-task-dialog');
+    let joined = false;
+    let presenceEpoch = 0;
+    let editingPump = null;
+    let editingDirty = false;
+    let sentEditingTask = null;
+
+    const renderEditingTasks = () => {
+        const active = new Map(editingTasks.map(task => [task.taskItemId, task.editors]));
+        for (const card of board.querySelectorAll('.kanban-card[data-task-id]')) {
+            const editors = active.get(card.dataset.taskId) ?? [];
+            const link = card.querySelector('.kanban-card__open');
+            card.classList.toggle('is-being-edited', editors.length > 0);
+            if (editors.length) {
+                const hint = `${board.dataset.taskEditingHint}: ${editors.map(editor => editor.displayName).join(', ')}`;
+                card.style.setProperty('--task-editor-color', /^#[0-9a-f]{6}$/i.test(editors[0].avatarColor)
+                    ? editors[0].avatarColor : '#8b5cf6');
+                card.title = hint;
+                if (link) {
+                    link.title = hint;
+                    link.setAttribute('aria-description', hint);
+                }
+            } else {
+                card.style.removeProperty('--task-editor-color');
+                card.removeAttribute('title');
+                link?.removeAttribute('title');
+                link?.removeAttribute('aria-description');
+            }
+        }
+    };
 
     const clearOnlineMembers = () => {
+        joined = false;
+        presenceEpoch++;
+        editingPump = null;
+        editingDirty = false;
+        sentEditingTask = null;
+        editingTasks = [];
         presenceRevision = -1;
         onlineMembers?.replaceChildren();
+        renderEditingTasks();
     };
 
     const renderOnlineMembers = (snapshot) => {
@@ -29,6 +67,8 @@
             || !Array.isArray(snapshot.members)) return;
 
         presenceRevision = snapshot.revision;
+        editingTasks = Array.isArray(snapshot.editingTasks) ? snapshot.editingTasks : [];
+        renderEditingTasks();
         const members = [...new Map(snapshot.members.map(member => [member.guestId, member])).values()];
         const avatars = members.slice(0, 4).map(member => {
             const avatar = document.createElement('span');
@@ -51,6 +91,35 @@
         onlineMembers.replaceChildren(...avatars);
     };
 
+    // Serialize start/stop: a close while StartEditingTask is pending must send
+    // StopEditingTask afterwards, rather than leave a late start visible forever.
+    const syncEditing = () => {
+        editingDirty = true;
+        if (disposed || !joined || editingPump
+            || connection.state !== signalR.HubConnectionState.Connected) return;
+        const epoch = presenceEpoch;
+        editingPump = (async () => {
+            while (!disposed && joined && epoch === presenceEpoch) {
+                editingDirty = false;
+                const taskId = editDialog?.open ? editDialog.dataset.editingTaskId : null;
+                if (taskId === sentEditingTask) return;
+                const snapshot = taskId
+                    ? await connection.invoke('StartEditingTask', publicId, taskId)
+                    : await connection.invoke('StopEditingTask', publicId);
+                if (epoch !== presenceEpoch || disposed) return;
+                sentEditingTask = taskId;
+                renderOnlineMembers(snapshot);
+            }
+        })().catch(error => console.error('Could not update task editing presence', error))
+            .finally(() => {
+                if (epoch !== presenceEpoch) return;
+                editingPump = null;
+                if (editingDirty) syncEditing();
+            });
+    };
+    document.addEventListener('board:task-editing-changed', syncEditing);
+    document.addEventListener('board:refreshed', renderEditingTasks);
+
     const stopForUnavailableBoard = async () => {
         connectionErrorRetry = false;
         refreshNeeded = false;
@@ -67,6 +136,29 @@
             refreshTimer = null;
             refreshBoard();
         }, delay);
+    };
+
+    const refreshClosedBoardDialogs = (page) => {
+        for (const [id, fields] of [
+            ['update-board-dialog', ['EditBoard.Name', 'EditBoard.Description', 'EditBoard.RowVersion']],
+            ['reset-board-dialog', ['rowVersion']]
+        ]) {
+            const current = document.getElementById(id);
+            const updated = page.getElementById(id);
+            // A version may only be refreshed alongside its data, never under
+            // an open draft or a reset confirmation the owner is reading.
+            if (!current || !updated || current.open) continue;
+            for (const name of fields) {
+                const input = current.querySelector(`[name="${name}"]`);
+                const replacement = updated.querySelector(`[name="${name}"]`);
+                if (input && replacement) input.value = replacement.value;
+            }
+            if (id === 'reset-board-dialog') {
+                const description = current.querySelector('#reset-board-description');
+                const replacement = updated.querySelector('#reset-board-description');
+                if (description && replacement) description.textContent = replacement.textContent;
+            }
+        }
     };
 
     const refreshBoard = async () => {
@@ -112,6 +204,7 @@
                 if (current && updated) current.replaceChildren(...updated.childNodes);
             }
             document.title = page.title;
+            refreshClosedBoardDialogs(page);
             document.dispatchEvent(new Event('board:refreshed'));
         } catch (error) {
             console.error('Board refresh failed', error);
@@ -143,6 +236,9 @@
         try {
             const snapshot = await connection.invoke('JoinBoard', publicId);
             renderOnlineMembers(snapshot);
+            joined = true;
+            // Includes a server-auto-opened dialog and restores state on reconnect.
+            syncEditing();
             // Also catch changes made while this connection was offline.
             invalidateBoard();
         } catch (error) {

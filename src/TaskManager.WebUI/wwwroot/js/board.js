@@ -139,6 +139,9 @@
             shareStatus.textContent = '';
         }
         dialog.showModal();
+        if (dialog.id === 'edit-task-dialog') {
+            document.dispatchEvent(new Event('board:task-editing-changed'));
+        }
 
         const initialFocus = dialog.querySelector('[data-dialog-initial-focus]');
         if (initialFocus instanceof HTMLInputElement) {
@@ -174,6 +177,8 @@
             if (dialog.id !== 'edit-task-dialog') {
                 return;
             }
+
+            document.dispatchEvent(new Event('board:task-editing-changed'));
 
             const url = new URL(window.location.href);
             if (url.searchParams.has('taskId')) {

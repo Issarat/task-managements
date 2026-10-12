@@ -12,6 +12,7 @@ internal sealed class BoardRepository(ApplicationDbContext dbContext)
 
     public async Task ResetTasksAsync(
         Board board,
+        byte[] rowVersion,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(board);
@@ -19,11 +20,14 @@ internal sealed class BoardRepository(ApplicationDbContext dbContext)
         await using var transaction = await dbContext.Database
             .BeginTransactionAsync(cancellationToken);
 
+        // Compare the version the owner confirmed BEFORE deleting any tasks.
+        // Lock order matches TaskRepository: Board first, TaskItems second.
+        await SaveAsync(board, rowVersion, cancellationToken);
+
         await dbContext.TaskItems
             .Where(task => task.BoardId == board.Id)
             .ExecuteDeleteAsync(cancellationToken);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
 
@@ -112,9 +116,13 @@ internal sealed class BoardRepository(ApplicationDbContext dbContext)
         return true;
     }
 
-    public Task SaveChangesAsync(
+    public Task SaveAsync(Board board, byte[] rowVersion,
         CancellationToken cancellationToken = default)
     {
+        dbContext.Entry(board).Property(item => item.RowVersion).OriginalValue = rowVersion;
+        // Always issue the conditional UPDATE, even when submitted values match.
+        // Reset must never skip its concurrency check because metadata is unchanged.
+        dbContext.Entry(board).Property(item => item.UpdatedAtUtc).IsModified = true;
         return dbContext.SaveChangesAsync(cancellationToken);
     }
 }

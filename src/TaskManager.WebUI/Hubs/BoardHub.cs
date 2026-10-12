@@ -74,6 +74,54 @@ public sealed class BoardHub(
         return snapshot;
     }
 
+    public async Task<BoardPresenceSnapshot> StartEditingTask(string publicId, Guid taskItemId)
+    {
+        RequireJoinedBoard(publicId);
+        var cancellationToken = Context.ConnectionAborted;
+        var token = Context.GetHttpContext()?.Request.Cookies["taskflow_guest"];
+        var guest = string.IsNullOrWhiteSpace(token) ? null
+            : await guestService.GetGuestByTokenAsync(token, cancellationToken);
+        if (guest is null)
+            throw new HubException("Session หมดอายุ กรุณาเริ่มใหม่");
+        var boards = await boardService.GetListBySessionIdAsync(guest.Id, cancellationToken);
+        // Check membership before GetAsync, which can enroll a guest on a public board.
+        if (!boards.Any(board => board.PublicId == publicId))
+            throw new HubException("ไม่สามารถเข้าร่วมบอร์ดนี้ได้");
+        var board = await boardService.GetAsync(publicId, guest.Id, cancellationToken);
+        if (board is null || !board.Tasks.Any(task => task.TaskItemId == taskItemId))
+            throw new HubException("ไม่พบงานในบอร์ดนี้");
+        return await ChangeEditingAsync(publicId, taskItemId);
+    }
+
+    public Task<BoardPresenceSnapshot> StopEditingTask(string publicId)
+    {
+        RequireJoinedBoard(publicId);
+        return ChangeEditingAsync(publicId, null);
+    }
+
+    private void RequireJoinedBoard(string publicId)
+    {
+        if (!Context.Items.TryGetValue("BoardPublicId", out var joinedBoard)
+            || !string.Equals(joinedBoard as string, publicId, StringComparison.Ordinal))
+            throw new HubException("กรุณาเข้าร่วมบอร์ดนี้ก่อน");
+    }
+
+    private async Task<BoardPresenceSnapshot> ChangeEditingAsync(string publicId, Guid? taskItemId)
+    {
+        BoardPresenceSnapshot snapshot;
+        try
+        {
+            snapshot = presence.SetEditing(Context.ConnectionId, publicId, taskItemId,
+                Context.ConnectionAborted);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new HubException("Session หมดอายุ กรุณาเริ่มใหม่");
+        }
+        await BroadcastPresenceAsync(snapshot);
+        return snapshot;
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         var snapshot = presence.Leave(Context.ConnectionId);

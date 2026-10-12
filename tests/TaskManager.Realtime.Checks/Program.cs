@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -58,16 +59,44 @@ Require((await a.Presence(2, b.JoinSnapshot!.Revision))?.Members.Count == 2, "A 
 Require(other.JoinSnapshot?.Members.Count == 1 && other.JoinSnapshot.Members[0].GuestId == guests.Other,
     "other board has its own roster");
 Pass("presence broadcasts joins and isolates each board roster");
+Require(await a.Invoke("StartEditingTask", "board-a", boards.TaskId), "A starts editing");
+var editingRevision = a.LastSnapshot!.Revision;
+Require((await b.Presence(2, editingRevision))?.EditingTasks.Single().Editors.Single().GuestId == guests.A,
+    "B receives A's editing profile live");
+Require(await b.Invoke("StartEditingTask", "board-a", boards.TaskId), "B can edit the same task without a lock");
+Require(b.LastSnapshot!.EditingTasks.Single().Editors.Count == 2, "both editors are shown");
+Require(await b.Invoke("StopEditingTask", "board-a"), "B stops editing");
+Require(b.LastSnapshot!.EditingTasks.Single().Editors.Single().GuestId == guests.A,
+    "stopping only removes the caller");
+Require(await a.Invoke("StopEditingTask", "board-a") && a.LastSnapshot!.EditingTasks.Count == 0,
+    "last editor stopping clears the task");
+Pass("real sockets publish concurrent editors and stop only the caller without locking tasks");
+Require(!await missing.Invoke("StartEditingTask", "board-a", boards.TaskId), "unjoined connection rejected");
+Require(!await expired.Invoke("StartEditingTask", "board-a", boards.TaskId), "expired unjoined guest rejected");
+Require(!await a.Invoke("StartEditingTask", "board-b", boards.OtherTaskId), "wrong joined board rejected");
+Require(!await a.Invoke("StopEditingTask", "board-b"), "cannot stop another board's editors");
+Require(!await a.Invoke("StartEditingTask", "board-a", Guid.NewGuid()), "unknown task rejected");
+Require(!await a.Invoke("StartEditingTask", "board-a", boards.OtherTaskId), "other board's task rejected");
+Pass("editing methods reject unjoined users, wrong boards and nonexistent or cross-board tasks");
 await using var duplicateTab = await HubSocket.Connect(address, "test-a");
 Require(await duplicateTab.Join("board-a"), "duplicate tab joins");
 Require(duplicateTab.JoinSnapshot?.Members.Count == 2, "same guest is counted once");
 Require(await duplicateTab.Join("board-a"), "repeated join is idempotent");
 Require(duplicateTab.JoinSnapshot?.Members.Count == 2, "repeated join has no duplicate avatar");
 var duplicateRevision = duplicateTab.JoinSnapshot!.Revision;
+Require(await a.Invoke("StartEditingTask", "board-a", boards.TaskId), "first tab edits");
+Require(await duplicateTab.Invoke("StartEditingTask", "board-a", boards.TaskId), "second tab edits");
+Require(duplicateTab.LastSnapshot!.EditingTasks.Single().Editors.Count == 1, "editor deduplicated across tabs");
+Require(await duplicateTab.Join("board-a") && duplicateTab.JoinSnapshot!.EditingTasks.Count == 1,
+    "repeated join preserves editing");
 await duplicateTab.DisposeAsync();
-Require((await b.Presence(2, duplicateRevision + 1))?.Members.Any(member => member.GuestId == guests.A) == true,
+var tabLeft = await b.Presence(2, duplicateTab.JoinSnapshot!.Revision + 1);
+Require(tabLeft?.Members.Any(member => member.GuestId == guests.A) == true,
     "closing one tab keeps the guest's other connection online");
+Require(tabLeft!.EditingTasks.Single().Editors.Single().GuestId == guests.A,
+    "closing one tab keeps the editor's other tab active");
 Pass("multiple tabs and repeated joins show one avatar until the last tab closes");
+Pass("editing deduplicates multiple tabs and survives repeated joins or closing one tab");
 
 var realHub = app.Services.GetRequiredService<IHubContext<BoardHub>>();
 var localizer = new FakeText();
@@ -79,7 +108,8 @@ BoardsController Controller(bool owner = true, IHubContext<BoardHub>? hub = null
     var accessor = new HttpContextAccessor { HttpContext = context };
     return new BoardsController(new GuestCookieService(accessor), new BoardOwnerCookieService(accessor),
         guests, boards, tasks, localizer, hub ?? realHub, NullLogger<BoardsController>.Instance)
-    { ControllerContext = new ControllerContext { HttpContext = context } };
+    { ControllerContext = new ControllerContext { HttpContext = context },
+        TempData = new TempDataDictionary(context, new MemoryTempDataProvider()) };
 }
 async Task Changed(Func<Task<IActionResult>> action, string name)
 {
@@ -101,12 +131,45 @@ await Changed(() => Controller().DeleteTask("board-a", boards.TaskId,
     Convert.ToBase64String(new byte[8]), default), "delete broadcasts after save");
 await Changed(() => Controller().MoveTask("board-a", boards.TaskId, boards.ColumnId,
     Convert.ToBase64String(new byte[8]), default), "move broadcasts after save");
-await Changed(() => Controller().Update("board-a", "Renamed", null, default), "rename broadcasts after save");
-await Changed(() => Controller().Reset("board-a", default), "reset broadcasts after save");
-var denied = await Controller(owner: false).Reset("board-a", default);
+await Changed(() => Controller().Update("board-a", new EditBoardFormModel {
+    Name = "Renamed", RowVersion = Convert.ToBase64String(new byte[8]) }, default), "rename broadcasts after save");
+await Changed(() => Controller().Reset("board-a", Convert.ToBase64String(new byte[8]), default), "reset broadcasts after save");
+var denied = await Controller(owner: false).Reset("board-a", Convert.ToBase64String(new byte[8]), default);
 Require(denied is StatusCodeResult { StatusCode: 403 }, "owner-only reset");
 Require(await b.Notification(150) is null, "no notification on denied reset");
 Pass("participant reset is forbidden and sends no event");
+
+var boardVersion = Convert.ToBase64String(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+boards.ThrowConflict = true;
+boards.Saved = false;
+var boardDraft = new EditBoardFormModel { Name = "My draft", Description = "Do not lose me", RowVersion = boardVersion };
+var boardConflict = await Controller().Update("board-a", boardDraft, default);
+Require(boardConflict is ViewResult { Model: BoardPageViewModel { BoardConflict: true, ShowEditBoardDialog: true } conflictPage }
+    && conflictPage.EditBoard.Name == "My draft" && conflictPage.EditBoard.Description == "Do not lose me"
+    && conflictPage.EditBoard.RowVersion == boardVersion, "keep draft and original version on conflict");
+Require(!boards.Saved && await b.Notification(150) is null, "failed board update sends no event");
+Pass("board update conflicts preserve the draft and original row version without a 500 or notification");
+var resetController = Controller();
+Require(await resetController.Reset("board-a", boardVersion, default) is RedirectToActionResult,
+    "reset conflict redirects safely");
+Require(resetController.TempData["BoardChangeError"] is not null && !boards.Saved
+    && await b.Notification(150) is null, "reset conflict reports failure without a change event");
+Pass("reset conflicts report an error instead of a 500 or successful notification");
+boards.ThrowConflict = false;
+foreach (var invalidVersion in new[] { "", "not-base64", Convert.ToBase64String(new byte[7]) })
+{
+    boards.Saved = false;
+    var badVersion = await Controller().Update("board-a", new EditBoardFormModel { Name = "Draft", RowVersion = invalidVersion }, default);
+    Require(badVersion is ViewResult && !boards.Saved, "invalid board version never saves");
+    var invalidReset = Controller();
+    Require(await invalidReset.Reset("board-a", invalidVersion, default) is RedirectToActionResult
+        && invalidReset.TempData["BoardChangeError"] is not null && !boards.Saved, "invalid reset version never resets");
+}
+Pass("missing, malformed and wrong-length board versions never save or reset");
+boards.Saved = false;
+Require(await Controller().Update("board-a", new EditBoardFormModel { Name = "   ", RowVersion = boardVersion }, default)
+    is ViewResult && !boards.Saved, "blank name is validation, not a 500");
+Pass("board edit validation returns the draft without saving");
 
 var invalid = await Controller().CreateTask("board-a", new CreateTaskFormModel { Title = "" }, default);
 Require(invalid is ViewResult, "validation returns view");
@@ -131,9 +194,12 @@ Require(await Controller().Snapshot("board-a", default) is ViewResult, "snapshot
 Pass("snapshot rejects missing guest/non-member and renders valid board");
 
 await a.DisposeAsync();
-Require((await b.Presence(1, duplicateRevision + 1))?.Members.Single().GuestId == guests.B,
+var finalTabLeft = await b.Presence(1, duplicateRevision + 1);
+Require(finalTabLeft?.Members.Single().GuestId == guests.B,
     "last connection leaving removes only that guest");
+Require(finalTabLeft!.EditingTasks.Count == 0, "disconnect clears the last editor");
 Pass("disconnecting the last tab removes the avatar live");
+Pass("disconnecting the last editing tab clears its task indicator live");
 await using var reconnect = await HubSocket.Connect(address, "test-a");
 Require(await reconnect.Join("board-a"), "rejoin after reconnect");
 await realHub.Clients.Group("board:board-a").SendAsync("BoardChanged", "board-a");
@@ -149,13 +215,19 @@ var lifetime = clock.GetUtcNow().UtcDateTime;
 state.Join("one", "board-a", profile, lifetime.AddSeconds(10));
 state.Join("two", "board-a", profile, lifetime.AddSeconds(20));
 state.Join("other", "board-b", profile, lifetime.AddSeconds(30));
+state.SetEditing("one", "board-a", boards.TaskId);
+state.SetEditing("two", "board-a", boards.TaskId);
+state.SetEditing("other", "board-b", boards.OtherTaskId);
 clock.Advance(TimeSpan.FromSeconds(10));
 var expiration = state.RemoveExpired();
 Require(expiration.Connections.Count == 1 && expiration.Connections[0].ConnectionId == "one", "inclusive expiry");
 Require(expiration.Snapshots.Single().Members.Count == 1, "another unexpired tab remains online");
 Require(expiration.Snapshots.Single().PublicId == "board-a", "expiry only broadcasts affected boards");
+Require(expiration.Snapshots.Single().EditingTasks.Single().Editors.Count == 1, "live editing tab remains");
 clock.Advance(TimeSpan.FromSeconds(10));
-Require(state.RemoveExpired().Snapshots.Single().Members.Count == 0, "expired final tab is offline");
+var lastExpiry = state.RemoveExpired().Snapshots.Single();
+Require(lastExpiry.Members.Count == 0, "expired final tab is offline");
+Require(lastExpiry.EditingTasks.Count == 0, "expired final editing tab clears indicator");
 Require(state.RemoveExpired().Connections.Count == 0, "expiry is idempotent");
 Require(state.Leave("missing") is null, "unknown disconnect is harmless");
 Require(state.Leave("other")?.Members.Count == 0, "empty roster on final leave");
@@ -169,6 +241,27 @@ using (var cancelled = new CancellationTokenSource())
     catch (OperationCanceledException) { }
 }
 Pass("expired or cancelled joins never add online users");
+try { state.SetEditing("one", "board-a", boards.TaskId); throw new Exception("Expired editing accepted"); }
+catch (InvalidOperationException) { }
+Pass("expiry removes editing presence and expired connections cannot resurrect it");
+
+var editState = new BoardPresenceService(clock);
+var deadlineUtc = clock.GetUtcNow().UtcDateTime.AddHours(1);
+editState.Join("a", "board-a", profile, deadlineUtc);
+editState.Join("a2", "board-a", profile, deadlineUtc);
+editState.Join("b", "board-a", profile with { GuestId = guests.B }, deadlineUtc);
+editState.SetEditing("a", "board-a", boards.TaskId);
+editState.SetEditing("a2", "board-a", boards.OtherTaskId);
+var twoTasks = editState.SetEditing("b", "board-a", boards.TaskId);
+Require(twoTasks.EditingTasks.Count == 2, "one guest can edit distinct tasks in separate tabs");
+Require(twoTasks.EditingTasks.Single(task => task.TaskItemId == boards.TaskId).Editors.Count == 2,
+    "distinct guests are not collapsed");
+var movedEditor = editState.SetEditing("a", "board-a", boards.OtherTaskId);
+Require(movedEditor.EditingTasks.Single(task => task.TaskItemId == boards.TaskId).Editors.Count == 1,
+    "one tab switching task removes its previous indicator");
+Require(movedEditor.EditingTasks.Single(task => task.TaskItemId == boards.OtherTaskId).Editors.Count == 1,
+    "two same guest tabs editing same task are deduplicated");
+Pass("each connection tracks one task, with independent tabs and deduplicated guest profiles");
 
 // Exercise the production expiry worker over real sockets without sleeping for
 // an hour and without touching either the demo DB or real guest identities.
@@ -188,6 +281,9 @@ using (var expiryWorker = new BoardPresenceBackgroundService(
 Require(app.Services.GetRequiredService<BoardPresenceService>().RemoveExpired().Connections.Count == 0,
     "worker removes expired connections");
 Pass("expiry worker notifies expired browsers and removes real group memberships");
+Require(!await reconnect.Invoke("StartEditingTask", "board-a", boards.TaskId),
+    "expired joined socket cannot announce new editing");
+Pass("expired joined sockets cannot recreate editing presence");
 Console.WriteLine($"{passed} server checks passed; no real database used.");
 // Close clients before the host so the test's receive loops can stop cleanly.
 foreach (var client in new[] { a, b, other, missing, expired, reconnect })
@@ -202,6 +298,7 @@ sealed class HubSocket : IAsyncDisposable
     readonly TaskCompletionSource sessionExpired = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public Task SessionExpired => sessionExpired.Task;
     public BoardPresenceSnapshot? JoinSnapshot { get; private set; }
+    public BoardPresenceSnapshot? LastSnapshot { get; private set; }
     readonly CancellationTokenSource shutdown = new();
     Task? reader;
     int invocation;
@@ -253,8 +350,14 @@ sealed class HubSocket : IAsyncDisposable
     }
     public async Task<bool> Join(string id)
     {
+        var success = await Invoke("JoinBoard", id);
+        if (success) JoinSnapshot = LastSnapshot;
+        return success;
+    }
+    public async Task<bool> Invoke(string method, params object[] arguments)
+    {
         var callId = (++invocation).ToString();
-        await Send(JsonSerializer.Serialize(new { type = 1, invocationId = callId, target = "JoinBoard", arguments = new[] { id } }));
+        await Send(JsonSerializer.Serialize(new { type = 1, invocationId = callId, target = method, arguments }));
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         while (true)
         {
@@ -262,7 +365,7 @@ sealed class HubSocket : IAsyncDisposable
             if (message.TryGetProperty("invocationId", out var value) && value.GetString() == callId)
             {
                 if (message.TryGetProperty("result", out var result))
-                    JoinSnapshot = result.Deserialize<BoardPresenceSnapshot>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+                    LastSnapshot = result.Deserialize<BoardPresenceSnapshot>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
                 return !message.TryGetProperty("error", out _);
             }
         }
@@ -320,8 +423,10 @@ sealed class FakeGuests : IGuestService
 sealed class FakeBoards(FakeGuests guests) : IBoardService
 {
     public Guid TaskId { get; } = Guid.NewGuid();
+    public Guid OtherTaskId { get; } = Guid.NewGuid();
     public Guid ColumnId { get; } = Guid.NewGuid();
     public bool Saved { get; set; }
+    public bool ThrowConflict { get; set; }
     public Task<BoardModel?> GetPreviewAsync(string publicId, CancellationToken cancellationToken = default) =>
         Task.FromResult<BoardModel?>(publicId is "board-a" or "board-b" ? Metadata(publicId) : null);
     public Task<CreatedBoardModel> CreateAsync(CreateBoardRequestModel request, CancellationToken cancellationToken = default) => throw new Exception("Must not seed a board");
@@ -329,11 +434,18 @@ sealed class FakeBoards(FakeGuests guests) : IBoardService
         Task.FromResult<IReadOnlyList<BoardNavigationModel>>([new(Guid.NewGuid(), guestId == guests.Other ? "board-b" : "board-a", "Test")]);
     public Task<BoardResponseModel?> GetAsync(string publicId, Guid guestId, CancellationToken cancellationToken = default) =>
         Task.FromResult<BoardResponseModel?>(new(Metadata(publicId), [], [new(ColumnId, "Backlog", "backlog", 1)],
-            [new(TaskId, ColumnId, "Task", null, TaskPriority.Low, 1, null, Guid.NewGuid(), null, null, new byte[8])]));
-    public Task<bool> ResetAsync(string publicId, string ownerToken, CancellationToken cancellationToken = default) { Saved = true; return Task.FromResult(true); }
+            [new(publicId == "board-a" ? TaskId : OtherTaskId, ColumnId, "Task", null, TaskPriority.Low, 1, null, Guid.NewGuid(), null, null, new byte[8])]));
+    public Task<bool> ResetAsync(string publicId, string ownerToken, byte[] rowVersion, CancellationToken cancellationToken = default)
+    { if (ThrowConflict) throw new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException(); Saved = true; return Task.FromResult(true); }
     public Task<BoardModel?> UpdateAsync(string publicId, string ownerToken, UpdateBoardRequestModel request, CancellationToken cancellationToken = default)
-    { Saved = true; return Task.FromResult<BoardModel?>(Metadata(publicId)); }
-    static BoardModel Metadata(string id) => new(Guid.NewGuid(), id, "Test", null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+    { if (ThrowConflict) throw new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException(); Saved = true; return Task.FromResult<BoardModel?>(Metadata(publicId)); }
+    static BoardModel Metadata(string id) => new(Guid.NewGuid(), id, "Test", null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1)) { RowVersion = new byte[8] };
+}
+
+sealed class MemoryTempDataProvider : ITempDataProvider
+{
+    public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
+    public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
 }
 sealed class FakeTasks : ITaskService
 {

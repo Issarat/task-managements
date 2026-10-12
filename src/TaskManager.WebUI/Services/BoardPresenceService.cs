@@ -22,7 +22,22 @@ public sealed class BoardPresenceService(TimeProvider timeProvider)
                 && existing.PublicId != publicId)
                 throw new InvalidOperationException("A connection can only join one board.");
 
-            connections[connectionId] = new(publicId, member, expiresAtUtc);
+            connections[connectionId] = new(publicId, member, expiresAtUtc, existing?.EditingTaskId);
+            return Snapshot(publicId);
+        }
+    }
+
+    public BoardPresenceSnapshot SetEditing(string connectionId, string publicId, Guid? taskItemId,
+        CancellationToken cancellationToken = default)
+    {
+        lock (gate)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!connections.TryGetValue(connectionId, out var connection)
+                || connection.PublicId != publicId
+                || connection.ExpiresAtUtc <= timeProvider.GetUtcNow().UtcDateTime)
+                throw new InvalidOperationException("The connection has no active board session.");
+            connections[connectionId] = connection with { EditingTaskId = taskItemId };
             return Snapshot(publicId);
         }
     }
@@ -55,8 +70,10 @@ public sealed class BoardPresenceService(TimeProvider timeProvider)
     private BoardPresenceSnapshot Snapshot(string publicId)
     {
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var members = connections.Values
+        var active = connections.Values
             .Where(connection => connection.PublicId == publicId && connection.ExpiresAtUtc > now)
+            .ToArray();
+        var members = active
             .GroupBy(connection => connection.Member.GuestId)
             .Select(group => group.First().Member)
             .OrderBy(member => member.DisplayName, StringComparer.Ordinal)
@@ -64,8 +81,20 @@ public sealed class BoardPresenceService(TimeProvider timeProvider)
             .ToArray();
         // A global monotonic revision avoids retaining entries for empty boards.
         // Browsers ignore delayed snapshots with older revisions.
-        return new(publicId, ++revision, members);
+        return new(publicId, ++revision, members)
+        {
+            EditingTasks = active.Where(connection => connection.EditingTaskId.HasValue)
+                .GroupBy(connection => connection.EditingTaskId!.Value)
+                .OrderBy(group => group.Key)
+                .Select(group => new TaskEditingPresenceModel(group.Key,
+                    group.GroupBy(connection => connection.Member.GuestId)
+                        .Select(editors => editors.First().Member)
+                        .OrderBy(member => member.DisplayName, StringComparer.Ordinal)
+                        .ThenBy(member => member.GuestId).ToArray()))
+                .ToArray()
+        };
     }
 
-    private sealed record Connection(string PublicId, OnlineBoardMemberModel Member, DateTime ExpiresAtUtc);
+    private sealed record Connection(string PublicId, OnlineBoardMemberModel Member,
+        DateTime ExpiresAtUtc, Guid? EditingTaskId);
 }

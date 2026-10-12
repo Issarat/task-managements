@@ -5,19 +5,30 @@ const vm = require('node:vm');
 const path = require('node:path');
 const script = fs.readFileSync(path.join(__dirname,
     '../src/TaskManager.WebUI/wwwroot/js/board-realtime.js'), 'utf8');
+const interactionScript = fs.readFileSync(path.join(__dirname,
+    '../src/TaskManager.WebUI/wwwroot/js/board.js'), 'utf8');
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(setImmediate); };
 
 function environment() {
     const timers = new Map();
-    const calls = { fetch: 0, replaced: [], events: [], joins: 0, starts: 0, stops: 0 };
+    const calls = { fetch: 0, replaced: [], events: [], joins: 0, starts: 0, stops: 0, editing: [] };
     const regions = ['.kanban-grid', '.board-heading', '.board-sidebar__workspace'];
     let sequence = 0;
     const handlers = {};
     const dialog = { open: true, title: 'Unsaved draft', rowVersion: 'original' };
+    const editDialog = { open: false, dataset: { editingTaskId: 'task-1' } };
+    const listeners = {};
+    const link = { setAttribute(name, value) { this[name] = value; },
+        removeAttribute(name) { delete this[name]; } };
+    const card = { dataset: { taskId: 'task-1' }, classes: new Set(),
+        classList: { toggle(name, on) { if (on) card.classes.add(name); else card.classes.delete(name); } },
+        style: { setProperty(name, value) { this[name] = value; }, removeProperty(name) { delete this[name]; } },
+        querySelector: () => link, removeAttribute(name) { delete this[name]; } };
     const online = { dataset: { onlineHint: 'Online' }, children: [],
         replaceChildren(...children) { this.children = children; } };
     const board = {
-        dataset: { boardPublicId: 'board-a', boardRefreshUrl: '/boards/board-a/snapshot' },
+        dataset: { boardPublicId: 'board-a', boardRefreshUrl: '/boards/board-a/snapshot', taskEditingHint: 'Editing by' },
+        querySelectorAll: () => [card],
         dragging: false, busy: false,
         getAttribute() { return this.busy ? 'true' : null; },
         querySelector(selector) {
@@ -31,7 +42,7 @@ function environment() {
     };
     const updated = { dataset: { boardPublicId: 'board-a' },
         querySelector: selector => ({ childNodes: [`new ${selector}`] }) };
-    const page = { title: 'Updated board', querySelector: () => updated };
+    const page = { title: 'Updated board', querySelector: () => updated, getElementById: () => null };
     const connection = {
         state: 'Disconnected', startFailure: false, joinFailure: false,
         async start() {
@@ -39,8 +50,16 @@ function environment() {
             if (this.startFailure) throw new Error('offline');
             this.state = 'Connected';
         },
-        async invoke(name, id) {
-            assert.equal(name, 'JoinBoard'); assert.equal(id, 'board-a'); calls.joins++;
+        async invoke(name, id, taskId) {
+            assert.equal(id, 'board-a');
+            if (name !== 'JoinBoard') {
+                assert.ok(['StartEditingTask', 'StopEditingTask'].includes(name));
+                calls.editing.push({ name, taskId });
+                await env.editingHook?.(name);
+                if (env.editingFailure) throw new Error('Editing rejected');
+                return { publicId: 'board-a', revision: 100 + calls.editing.length, members: [], editingTasks: [] };
+            }
+            calls.joins++;
             if (this.joinFailure) throw new Error('expired');
             return { publicId: 'board-a', revision: 1, members: [] };
         },
@@ -51,9 +70,11 @@ function environment() {
         onclose: callback => { handlers.close = callback; }
     };
     const document = { title: 'Original board', querySelector: () => board,
+        getElementById: id => id === 'edit-task-dialog' ? editDialog : null,
+        addEventListener(name, callback) { (listeners[name] ??= []).push(callback); },
         createElement: () => ({ style: { setProperty(name, value) { this[name] = value; } },
             setAttribute(name, value) { this[name] = value; } }),
-        dispatchEvent: event => calls.events.push(event.type) };
+        dispatchEvent(event) { calls.events.push(event.type); listeners[event.type]?.forEach(callback => callback(event)); } };
     const signalR = { HubConnectionState: { Connected: 'Connected' },
         HubConnectionBuilder: class {
             withUrl(url) { assert.equal(url, '/hubs/board'); return this; }
@@ -77,7 +98,7 @@ function environment() {
             return { status: env.status, ok: env.status === 200, text: async () => '<html />' };
         }
     };
-    return { calls, board, dialog, online, updated, connection, handlers, document, timers, env,
+    return { calls, board, dialog, editDialog, card, link, online, page, updated, connection, handlers, document, timers, env, context,
         run: async () => { vm.runInNewContext(script, context); await settle(); },
         tick: async () => {
             const [id, timer] = timers.entries().next().value ?? [];
@@ -203,6 +224,151 @@ function environment() {
         assert.equal(e.online.children[0].textContent, unsafe.shortName);
         assert.equal(e.online.children[0].style['--avatar-color'], '#94a3b8');
         assert.equal(e.online.children[0].innerHTML, undefined);
+    });
+    const editingSnapshot = (revision, editors) => ({ ...snapshot(revision, editors),
+        editingTasks: editors.length ? [{ taskItemId: 'task-1', editors }] : [] });
+    const editChanged = async e => {
+        e.document.dispatchEvent({ type: 'board:task-editing-changed' }); await settle();
+    };
+    await check('editing border and tooltip show all editors without locking the card', async () => {
+        const e = environment(); await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(2, [member(1), member(2)]));
+        assert.ok(e.card.classes.has('is-being-edited'));
+        assert.equal(e.card.style['--task-editor-color'], '#abcdef');
+        assert.equal(e.link.title, 'Editing by: Person 1, Person 2');
+        assert.equal(e.link['aria-description'], e.link.title);
+        assert.equal(e.link.disabled, undefined);
+    });
+    await check('ending editing removes the border, tooltip and accessible description', async () => {
+        const e = environment(); await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(2, [member(1)]));
+        e.handlers.BoardPresenceChanged(editingSnapshot(3, []));
+        assert.equal(e.card.classes.size, 0); assert.equal(e.card.title, undefined);
+        assert.equal(e.link.title, undefined); assert.equal(e.link['aria-description'], undefined);
+        assert.equal(e.card.style['--task-editor-color'], undefined);
+    });
+    await check('old or cross-board snapshots cannot restore stale editing', async () => {
+        const e = environment(); await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(3, []));
+        e.handlers.BoardPresenceChanged(editingSnapshot(2, [member(1)]));
+        e.handlers.BoardPresenceChanged({ ...editingSnapshot(4, [member(1)]), publicId: 'board-b' });
+        assert.equal(e.card.classes.size, 0);
+    });
+    await check('task refresh reapplies editing to replacement cards', async () => {
+        const e = environment(); await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(2, [member(1)]));
+        e.card.classes.clear(); delete e.link.title;
+        await e.tick(); assert.ok(e.card.classes.has('is-being-edited'));
+        assert.equal(e.link.title, 'Editing by: Person 1');
+    });
+    await check('auto-opened edit dialog announces editing after join', async () => {
+        const e = environment(); e.editDialog.open = true; await e.run();
+        assert.deepEqual(e.calls.editing, [{ name: 'StartEditingTask', taskId: 'task-1' }]);
+        e.editDialog.open = false; await editChanged(e);
+        assert.equal(e.calls.editing[1].name, 'StopEditingTask');
+    });
+    await check('closing during a pending start sends stop afterwards', async () => {
+        const e = environment(); await e.run();
+        let release;
+        e.env.editingHook = () => new Promise(resolve => { release = resolve; });
+        e.editDialog.open = true; await editChanged(e);
+        e.editDialog.open = false; await editChanged(e);
+        assert.equal(e.calls.editing.length, 1);
+        e.env.editingHook = null; release(); await settle();
+        assert.deepEqual(e.calls.editing.map(call => call.name), ['StartEditingTask', 'StopEditingTask']);
+    });
+    await check('reconnect clears unknown editing and reannounces the open dialog', async () => {
+        const e = environment(); e.editDialog.open = true; await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(200, [member(1)]));
+        e.handlers.reconnecting(); assert.equal(e.card.classes.size, 0);
+        await e.handlers.reconnected(); await settle();
+        assert.equal(e.calls.editing.length, 2);
+        assert.ok(e.calls.editing.every(call => call.name === 'StartEditingTask'));
+    });
+    await check('a late old-connection response cannot restore its editing border', async () => {
+        const e = environment(); await e.run(); let release;
+        e.env.editingHook = () => new Promise(resolve => { release = resolve; });
+        e.editDialog.open = true; await editChanged(e);
+        e.connection.state = 'Disconnected'; e.handlers.reconnecting();
+        e.env.editingHook = null; release(); await settle();
+        assert.equal(e.card.classes.size, 0); assert.equal(e.calls.editing.length, 1);
+        e.editDialog.open = false; e.connection.state = 'Connected';
+        await e.handlers.reconnected(); await settle();
+        assert.equal(e.calls.editing.length, 1);
+    });
+    await check('failed editing announcement does not lock tasks or loop retries', async () => {
+        const e = environment(); e.env.editingFailure = true; e.editDialog.open = true; await e.run();
+        assert.equal(e.calls.editing.length, 1); assert.equal(e.calls.stops, 0);
+        e.editDialog.open = false; await editChanged(e);
+        assert.equal(e.calls.editing.length, 1);
+    });
+    await check('untrusted editing names stay text and colors are constrained', async () => {
+        const e = environment(); await e.run();
+        e.handlers.BoardPresenceChanged(editingSnapshot(2, [{ ...member(1),
+            displayName: '<script>alert(1)</script>', avatarColor: 'red; background:url(x)' }]));
+        assert.equal(e.link.title, 'Editing by: <script>alert(1)</script>');
+        assert.equal(e.card.style['--task-editor-color'], '#8b5cf6');
+        assert.equal(e.link.innerHTML, undefined);
+    });
+    await check('dialog interactions announce editing, keep title focus and clear URL state on every close route', async () => {
+        const e = environment();
+        class Input { focus() { this.focused = true; } select() { this.selected = true; } }
+        class Dialog {
+            addEventListener(name, handler) { this.listeners[name] = handler; }
+            showModal() { this.open = true; }
+            close() { this.open = false; this.listeners.close(); }
+            querySelector() { return input; }
+        }
+        const input = new Input();
+        Object.setPrototypeOf(e.editDialog, Dialog.prototype);
+        Object.assign(e.editDialog, { id: 'edit-task-dialog', listeners: {} });
+        e.editDialog.dataset.dialogAutoOpen = 'true';
+        const open = { addEventListener(name, handler) { this.click = handler; },
+            getAttribute() { return 'edit-task-dialog'; } };
+        const close = { addEventListener(name, handler) { this.click = handler; },
+            closest: () => e.editDialog };
+        e.document.querySelector = selector => selector === '[data-board-screen]' ? e.board : null;
+        e.document.querySelectorAll = selector => selector === 'dialog' ? [e.editDialog]
+            : selector === '[data-dialog-open]' ? [open]
+            : selector === '[data-dialog-close]' ? [close] : [];
+        Object.assign(e.context, { HTMLInputElement: Input, HTMLDialogElement: Dialog,
+            HTMLFormElement: class {}, URL });
+        e.context.window.location = { href: 'https://example.test/boards/board-a?taskId=task-1&keep=yes' };
+        e.context.window.history = { state: null,
+            replaceState(state, unused, href) { e.context.window.location.href = href; } };
+        vm.runInNewContext(interactionScript, e.context);
+        await e.run();
+        assert.ok(input.focused && input.selected);
+        assert.equal(e.calls.editing[0].name, 'StartEditingTask');
+        close.click(); await settle();
+        assert.equal(e.calls.editing[1].name, 'StopEditingTask');
+        assert.equal(new URL(e.context.window.location.href).searchParams.has('taskId'), false);
+        assert.equal(new URL(e.context.window.location.href).searchParams.get('keep'), 'yes');
+        open.click(); await settle();
+        e.editDialog.listeners.click({ target: e.editDialog }); await settle();
+        assert.equal(e.calls.editing[3].name, 'StopEditingTask');
+        open.click(); await settle();
+        // Escape closes a native dialog and raises the same close event.
+        e.editDialog.close(); await settle();
+        assert.equal(e.calls.editing[5].name, 'StopEditingTask');
+    });
+    for (const isOpen of [false, true]) await check(`board forms ${isOpen ? 'preserve open drafts and confirmation versions' : 'refresh closed data and versions together'}`, async () => {
+        const e = environment();
+        const fields = { 'EditBoard.Name': { value: 'Draft' }, 'EditBoard.Description': { value: 'Draft description' },
+            'EditBoard.RowVersion': { value: 'old-version' }, rowVersion: { value: 'old-confirmation' } };
+        const dialog = { open: isOpen, querySelector(selector) {
+            return fields[selector.match(/name="([^"]+)"/)?.[1]] ?? null;
+        } };
+        const previousLookup = e.document.getElementById;
+        e.document.getElementById = id => ['update-board-dialog', 'reset-board-dialog'].includes(id) ? dialog : previousLookup(id);
+        e.page.getElementById = () => ({ querySelector(selector) {
+            return selector.startsWith('[name=') ? { value: 'latest-data-and-version' } : null;
+        } });
+        await e.run(); await e.tick();
+        assert.equal(fields['EditBoard.Name'].value, isOpen ? 'Draft' : 'latest-data-and-version');
+        assert.equal(fields['EditBoard.Description'].value, isOpen ? 'Draft description' : 'latest-data-and-version');
+        assert.equal(fields['EditBoard.RowVersion'].value, isOpen ? 'old-version' : 'latest-data-and-version');
+        assert.equal(fields.rowVersion.value, isOpen ? 'old-confirmation' : 'latest-data-and-version');
     });
     console.log(`${passed} checks passed.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -19,7 +19,10 @@ public sealed record BoardModel(
     string Name,
     string? Description,
     DateTime CreatedAtUtc,
-    DateTime ExpiresAtUtc);
+    DateTime ExpiresAtUtc)
+{
+    public byte[] RowVersion { get; init; } = [];
+}
 
 public sealed record BoardColumnModel(
     Guid BoardColumnId,
@@ -60,4 +63,5 @@ public sealed record CreatedBoardModel(
 
 public sealed record UpdateBoardRequestModel(
     string Name,
-    string? Description);
+    string? Description,
+    byte[] RowVersion);

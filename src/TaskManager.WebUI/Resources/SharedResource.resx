@@ -170,4 +170,11 @@
   <data name="SharedBoardUnavailableDescription" xml:space="preserve"><value>ลิงก์อาจไม่ถูกต้องหรือบอร์ดหมดอายุแล้ว คุณสามารถเริ่มทดลองใช้งานเพื่อสร้างบอร์ดของคุณเองได้</value></data>
   <data name="BoardOnlineMembersLabel" xml:space="preserve"><value>ผู้ที่ออนไลน์ในบอร์ด</value></data>
   <data name="BoardOnlineMemberHint" xml:space="preserve"><value>ออนไลน์อยู่ในบอร์ดนี้</value></data>
+  <data name="TaskEditingBy" xml:space="preserve"><value>กำลังแก้ไขโดย</value></data>
+  <data name="BoardConcurrentChange" xml:space="preserve"><value>บอร์ดมีการเปลี่ยนแปลง ข้อมูลที่คุณกรอกยังอยู่ แต่ยังไม่ได้บันทึก กรุณาคัดลอกข้อความที่ต้องการเก็บแล้วโหลดข้อมูลล่าสุดก่อนแก้ไขอีกครั้ง</value></data>
+  <data name="BoardResetConcurrentChange" xml:space="preserve"><value>ไม่ได้รีเซ็ตบอร์ด เพราะบอร์ดมีการเปลี่ยนแปลงหรือข้อมูลเวอร์ชันไม่ถูกต้อง กรุณาตรวจสอบข้อมูลล่าสุดก่อนยืนยันรีเซ็ตอีกครั้ง</value></data>
+  <data name="BoardNameValidation" xml:space="preserve"><value>กรุณาระบุชื่อบอร์ดไม่เกิน 120 ตัวอักษร</value></data>
+  <data name="BoardDescriptionValidation" xml:space="preserve"><value>คำอธิบายบอร์ดต้องไม่เกิน 500 ตัวอักษร</value></data>
+  <data name="BoardInvalidDetails" xml:space="preserve"><value>ข้อมูลบอร์ดไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value></data>
+  <data name="BoardReload" xml:space="preserve"><value>โหลดข้อมูลล่าสุด</value></data>
 </root>

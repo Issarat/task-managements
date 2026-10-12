@@ -7,6 +7,7 @@ public interface IBoardRepository
 
     Task ResetTasksAsync(
         Board board,
+        byte[] rowVersion,
         CancellationToken cancellationToken = default);
 
     Task AddAsync(
@@ -31,6 +32,6 @@ public interface IBoardRepository
         DateTime joinedAtUtc,
         CancellationToken cancellationToken = default);
 
-    Task SaveChangesAsync(
+    Task SaveAsync(Board board, byte[] rowVersion,
         CancellationToken cancellationToken = default);
 }

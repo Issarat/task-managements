@@ -27,10 +27,12 @@ public sealed class BoardService(IBoardRepository boardRepository)
     public async Task<bool> ResetAsync(
         string publicId,
         string ownerToken,
+        byte[] rowVersion,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(publicId);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerToken);
+        ValidateRowVersion(rowVersion);
 
         var board = await boardRepository.GetByPublicIdForUpdateAsync(
             publicId, cancellationToken);
@@ -49,7 +51,7 @@ public sealed class BoardService(IBoardRepository boardRepository)
 
         board.UpdatedAtUtc = now;
         board.MarkActivity(now);
-        await boardRepository.ResetTasksAsync(board, cancellationToken);
+        await boardRepository.ResetTasksAsync(board, rowVersion, cancellationToken);
         return true;
     }
 
@@ -212,12 +214,13 @@ public sealed class BoardService(IBoardRepository boardRepository)
                 "Only the board owner can update this board.");
         }
 
+        ValidateRowVersion(request.RowVersion);
         board.Name = NormalizeName(request.Name);
         board.Description = NormalizeDescription(request.Description);
         board.UpdatedAtUtc = now;
         board.MarkActivity(now);
 
-        await boardRepository.SaveChangesAsync(cancellationToken);
+        await boardRepository.SaveAsync(board, request.RowVersion, cancellationToken);
 
         return MapBoard(board);
     }
@@ -325,7 +328,13 @@ public sealed class BoardService(IBoardRepository boardRepository)
             board.Name,
             board.Description,
             board.CreatedAtUtc,
-            board.ExpiresAtUtc);
+            board.ExpiresAtUtc) { RowVersion = board.RowVersion.ToArray() };
+    }
+
+    private static void ValidateRowVersion(byte[] rowVersion)
+    {
+        if (rowVersion is null || rowVersion.Length != 8)
+            throw new ArgumentException("A valid board row version is required.", nameof(rowVersion));
     }
 
     private static string NormalizeName(string name)
