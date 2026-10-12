@@ -4,6 +4,16 @@ A portfolio project built with ASP.NET Core MVC and SignalR. TaskFlow lets
 visitors share a Kanban board and manage tasks together without registration,
 while protecting saved work from stale concurrent edits.
 
+## Live Demo
+
+[Try TaskFlow online](https://task-managements-11n6.onrender.com/)
+
+Open the demo and select **เริ่มทดลองใช้งาน** to create a guest identity and a
+sample board. No registration is required.
+
+The demo runs on Render's Free plan, so the first request after inactivity may
+take about a minute while the service wakes up. See [Render's Free plan limits](https://render.com/docs/free).
+
 > **Portfolio demo:** guest identities and board data are temporary. Guest
 > sessions last 24 hours; boards expire with their creator's guest session.
 > Expired data is cleaned up automatically. Do not enter personal, confidential
@@ -210,11 +220,13 @@ used unchanged inside the Linux container.
 
 ## Deployment
 
-Deployment preparation targets a Free Docker Web Service on Render and a separate
-SQL Server database on MonsterASP.NET. See the [step-by-step deployment guide](documents/deploy-render.md)
-and `render.yaml`. Apply migrations before deployment and keep the real connection
-string in Render environment variables, never in Git. The cloud connection and
-redeploy/key persistence still need verification against the actual services.
+The [public demo](https://task-managements-11n6.onrender.com/) uses a Free Docker
+Web Service on Render and a separate SQL Server database on MonsterASP.NET.
+See the [step-by-step deployment guide](documents/deploy-render.md) and
+[Render Blueprint](render.yaml). Apply migrations before deployment and keep the
+real connection string in Render environment variables, never in Git.
+Publishing the URL does not replace end-to-end checks of database-backed flows
+or verification of Data Protection key persistence across redeploys.
 
 ## Design Decisions
 
@@ -251,8 +263,8 @@ redeploy/key persistence still need verification against the actual services.
 
 ## Roadmap
 
-- [ ] Complete the first Render deployment and verify the external SQL connection
-  and Data Protection key persistence across redeploys.
+- [ ] Verify deployed guest/task flows, collaboration between browsers and
+  Data Protection key persistence across redeploys.
 - [ ] Fix drag/drop pending-state restoration after browser Back/Forward cache navigation.
 - [ ] Add request throttling and demo data quotas before wider public exposure.
 - [ ] Add CI automation for the regression checks.

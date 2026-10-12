@@ -2,7 +2,9 @@
 
 คู่มือนี้ใช้ Render รัน Linux Docker image และเชื่อม SQL Server ของ MonsterASP.NET
 ไม่ใช้ PostgreSQL และไม่ส่ง Connection String หรือรหัสผ่านขึ้น GitHub
-ไฟล์ใน repository เป็นการเตรียม deploy เท่านั้น ยังไม่ได้สร้าง Render service หรือเชื่อม DB Cloud จริง
+Demo URL: [เปิด TaskFlow](https://task-managements-11n6.onrender.com/)
+ไฟล์ใน repository ไม่สร้างหรือเปลี่ยนบริการ Cloud ด้วยตัวเอง
+หลัง deploy ยังต้องตรวจการใช้งานกับ DB จริงและ key persistence ตามขั้นตอนท้ายคู่มือ
 
 ## 1. สร้างฐานข้อมูล
 
