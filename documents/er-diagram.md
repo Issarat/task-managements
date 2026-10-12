@@ -1,6 +1,6 @@
 # Collaborative Task Manager — ER Diagram
 
-> Status: Target schema for the public web-demo MVP.
+> Status: Schema and behavior implemented by the current public web-demo application.
 >
 > Database: SQL Server / Azure SQL. The application has no registration or login. Visitors receive short-lived anonymous identities and board-owner tokens through secure cookies.
 
@@ -11,7 +11,7 @@
 - Values in the database use the Gregorian calendar (A.D. / C.E.), not the Buddhist Era calendar.
 - Convert UTC to `Asia/Bangkok` only when displaying a value in the UI.
 - `start_date` and `due_date` are calendar dates without a time or timezone, so they use SQL Server `date`.
-- A demo cookie and its board expire at the next midnight in Bangkok. The application calculates that boundary and stores the resulting instant as UTC in `expires_at_utc`.
+- A newly generated guest expires 24 hours after creation. A board inherits its creator's existing guest expiry (so it may have less than 24 hours remaining). Joining or editing does not extend these UTC `expires_at_utc` values; there is no global midnight reset.
 
 ## Diagram
 
@@ -32,7 +32,7 @@ erDiagram
 
 ### `anonymous_users`
 
-Stores the temporary identity generated for a visitor. The raw session token is kept only in an encrypted, `HttpOnly` cookie; the database stores its SHA-256 hash.
+Stores the temporary identity generated for a visitor. The raw session token is kept in an `HttpOnly`, `Secure`, `SameSite=Lax` cookie; the database stores its SHA-256 hash. The application does not additionally encrypt the token's cookie value.
 
 | Column | Type | Key | Nullable | Default | Description |
 | --- | --- | --- | --- | --- | --- |
@@ -42,7 +42,7 @@ Stores the temporary identity generated for a visitor. The raw session token is 
 | `avatar_color` | `char(7)` | — | No | — | Generated hexadecimal avatar color, for example `#7C3AED` |
 | `created_at_utc` | `datetime2` | — | No | `SYSUTCDATETIME()` | UTC creation time in the Gregorian calendar |
 | `last_seen_at_utc` | `datetime2` | — | No | `SYSUTCDATETIME()` | UTC time of the visitor's latest activity |
-| `expires_at_utc` | `datetime2` | — | No | — | UTC instant corresponding to the next Bangkok midnight |
+| `expires_at_utc` | `datetime2` | — | No | — | UTC creation time plus 24 hours |
 | `row_version` | `rowversion` | — | No | Auto | Optimistic concurrency token |
 
 The anonymous identity cookie uses `HttpOnly`, `Secure`, and `SameSite=Lax`. Its expiry matches `expires_at_utc`.
@@ -56,17 +56,17 @@ Stores public demo boards. Anyone with the public URL can open and edit tasks. D
 | Column | Type | Key | Nullable | Default | Description |
 | --- | --- | --- | --- | --- | --- |
 | `board_id` | `uniqueidentifier` | PK | No | Application generated | Internal identifier of the board |
-| `public_id` | `varchar(32)` | UK | No | Application generated | Cryptographically random Base64URL identifier used in `/b/{publicId}` |
+| `public_id` | `varchar(32)` | UK | No | Application generated | Cryptographically random Base64URL identifier used in `/boards/{publicId}` |
 | `name` | `nvarchar(120)` | — | No | — | Display name of the board |
 | `description` | `nvarchar(500)` | — | Yes | `NULL` | Short board description |
 | `owner_token_hash` | `char(64)` | UK | No | — | SHA-256 hash of the owner token; the raw token exists only in the owner's cookie |
 | `created_at_utc` | `datetime2` | — | No | `SYSUTCDATETIME()` | UTC creation time in the Gregorian calendar |
-| `updated_at_utc` | `datetime2` | — | Yes | `NULL` | UTC time of the latest board-level update |
+| `updated_at_utc` | `datetime2` | — | Yes | `NULL` | UTC time of the latest board metadata or task update |
 | `last_activity_at_utc` | `datetime2` | — | No | `SYSUTCDATETIME()` | UTC time of the latest board or task activity |
-| `expires_at_utc` | `datetime2` | — | No | — | UTC instant when the daily demo cycle ends |
+| `expires_at_utc` | `datetime2` | — | No | — | Expiry inherited from the creator's guest session |
 | `row_version` | `rowversion` | — | No | Auto | Optimistic concurrency token |
 
-The owner cookie is scoped to `/b/{publicId}`. Sharing the public URL never shares the owner token.
+Owner-cookie names include the board public ID (`taskflow_board_owner_{publicId}`), with cookie Path `/`. Sharing the public URL never shares the owner token. Both board metadata changes and Reset require a matching owner token.
 
 ---
 
@@ -102,7 +102,7 @@ Stores ordered Kanban columns. A trial board starts with `Backlog`, `To do`, `In
 | `updated_at_utc` | `datetime2` | — | Yes | `NULL` | UTC time of the latest rename or reorder |
 | `row_version` | `rowversion` | — | No | Auto | Optimistic concurrency token |
 
-Initial columns use sort orders `1000`, `2000`, `3000`, and `4000`.
+Initial columns use sort orders `1`, `2`, `3`, and `4`.
 
 ---
 
@@ -127,7 +127,7 @@ Stores tasks and their current Kanban positions. Task deletion is a physical del
 | `updated_at_utc` | `datetime2` | — | Yes | `NULL` | UTC time of the latest update |
 | `row_version` | `rowversion` | — | No | Auto | Optimistic concurrency token returned to clients |
 
-Only Markdown source is stored. The server renders and sanitizes it when showing task details. Board cards receive a plain-text preview of at most 160 characters and visually clamp it to two lines.
+Only Markdown source is stored; rich Markdown rendering/sanitization is not implemented. Task details use a text editor. Cards receive the first nonempty line, trimmed and truncated to at most 90 characters, displayed as HTML-encoded text. The database/domain priority default remains `Medium`; the new-task UI defaults to `Low`.
 
 ---
 
@@ -136,14 +136,14 @@ Only Markdown source is stored. The server renders and sanitizes it when showing
 ### `anonymous_users`
 
 - Unique index on `session_token_hash`.
-- Index on `expires_at_utc` for daily cleanup.
+- Index on `expires_at_utc` for periodic expired-data cleanup.
 - `avatar_color` must be generated by the server from the approved palette.
 
 ### `boards`
 
 - Unique index on `public_id`.
 - Unique index on `owner_token_hash`.
-- Index on `expires_at_utc` for daily cleanup.
+- Index on `expires_at_utc` for periodic expired-data cleanup.
 - Check constraint: `last_activity_at_utc >= created_at_utc`.
 - Check constraint: `expires_at_utc > created_at_utc`.
 - A board is available only when `expires_at_utc > SYSUTCDATETIME()`.
@@ -177,15 +177,9 @@ Only Markdown source is stored. The server renders and sanitizes it when showing
 
 ### Start trial
 
-`CreateTrialBoardAsync` runs only after the visitor presses **Start trial** on the landing page. One transaction creates:
+`HomeController.TryDemo` runs after the visitor presses the trial button. It reuses a valid guest or creates one, then opens that guest's most recently active live board if one exists. Otherwise, `BoardService.CreateAsync` creates a trial board with its owner-token hash, creator membership, four columns and one sample task. The board aggregate is saved atomically; guest creation is a separate save, not part of that transaction.
 
-1. The anonymous identity when the visitor does not already have a valid identity for the current demo cycle.
-2. The board and its owner token hash.
-3. The participant row for the creator.
-4. The four initial columns.
-5. The sample tasks.
-
-This dynamic sample data must not use EF Core `HasData`.
+Ordinary **Create board** does not include sample tasks. Opening a shared link enrolls the visitor in that existing board, without creating/reseeding a replacement board. Sample data is generated at runtime, not through EF Core `HasData`.
 
 ### Manual reset
 
@@ -194,16 +188,16 @@ This dynamic sample data must not use EF Core `HasData`.
 - It keeps the board, participants, and four columns.
 - It leaves the board empty and does not automatically insert sample tasks.
 
-If the optional **Load sample data** action remains in the UI, it is also owner-only and explicitly invokes the sample-task factory after confirmation.
+There is no **Load sample data** action in the current UI.
 
-### Daily demo reset
+### Expired-data cleanup
 
-- All demo identities and boards expire at the next `00:00` in `Asia/Bangkok`; the corresponding instant is stored in UTC.
-- Daily cleanup physically deletes expired boards. Cascades remove their columns, participants, and tasks.
-- Expired anonymous identities are deleted after their participant rows have been removed.
-- Daily cleanup never creates a new board or inserts seed data.
-- If the host was sleeping at midnight, startup and the first request must perform the same expiry check before returning data.
-- Opening an expired public URL shows a message and a link back to the landing page to create a new trial board.
+- Guest and board expiry is enforced on access independently of physical deletion.
+- A hosted service runs cleanup on startup and every five minutes by default, deleting at most 100 expired boards and 100 expired guests per batch.
+- Each batch is transactional. Tasks are deleted before their participant/column dependencies, then the expired boards are removed.
+- Expired guests are deleted only when they have no board memberships. A surviving board retains referenced authors/assignees.
+- Cleanup never resets valid boards or seeds replacement data. If the host stops or sleeps, cleanup resumes when the application runs again.
+- An expired public URL does not reopen/recreate that board. A visitor without a valid guest receives the landing-page unavailable flow; an existing guest can receive a not-found response.
 
 ---
 
@@ -211,16 +205,17 @@ If the optional **Load sample data** action remains in the UI, it is also owner-
 
 Task presence is transient and is not stored in a database table.
 
-- SignalR tracks the connection, participant, board, task, and last heartbeat in server memory.
+- SignalR presence tracks each live connection's guest profile, board, edited task and session/board expiry in server memory. Persistent board memberships are separate from online presence.
 - A task being used by another participant receives an outline matching that participant's avatar color.
-- Hovering or focusing the outlined card shows a tooltip naming the active participant.
-- Presence expires after 15 seconds without a heartbeat and is removed immediately on modal close or disconnect.
-- Relevant events include `TaskCreated`, `TaskUpdated`, `TaskMoved`, `TaskDeleted`, `BoardReset`, and `PresenceChanged`.
+- Cards expose editor names through tooltips and accessible descriptions. Multiple tabs for the same guest are deduplicated, and multiple guests can edit simultaneously.
+- Modal close clears that connection's editing state; disconnection clears its online state. Network failures are reflected when SignalR detects the disconnect, not by a custom 15-second heartbeat rule.
+- A worker removes expired board/guest connections on a five-second interval while the application is running.
+- Current events are `BoardChanged`, `BoardPresenceChanged` (including editors), and `BoardSessionExpired`.
 
 ## Delete behavior
 
 - Deleting a board cascades to `board_columns`, `board_participants`, and `task_items`.
-- Deleting an anonymous user is restricted while participant rows still reference it; daily cleanup removes expired boards first.
+- Deleting an anonymous user is restricted while participant rows still reference it; periodic cleanup removes expired boards first.
 - Deleting a board participant is restricted while tasks still reference it.
 - Task deletes are physical deletes and are broadcast through SignalR.
 
