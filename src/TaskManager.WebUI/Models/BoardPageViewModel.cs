@@ -20,6 +20,8 @@ public sealed record BoardPageViewModel(
     public EditBoardFormModel EditBoard { get; init; } = new();
     public bool ShowEditBoardDialog { get; init; }
     public bool BoardConflict { get; init; }
+    public CreateBoardFormModel CreateBoard { get; init; } = new();
+    public bool ShowCreateBoardDialog { get; init; }
 }
 
 public sealed record BoardNavigationViewModel(

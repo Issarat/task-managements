@@ -1,5 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -58,123 +117,365 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="PageTitle" xml:space="preserve"><value>ทดลองจัดการงาน</value></data>
-  <data name="MainNavigationLabel" xml:space="preserve"><value>เมนูหลัก</value></data>
-  <data name="HomeLinkLabel" xml:space="preserve"><value>TaskFlow หน้าหลัก</value></data>
-  <data name="WorkspaceLabel" xml:space="preserve"><value>WORKSPACE</value></data>
-  <data name="CreateBoard" xml:space="preserve"><value>สร้างบอร์ดใหม่</value></data>
-  <data name="CreateBoardDescription" xml:space="preserve"><value>เริ่มจัดการงานของคุณ</value></data>
-  <data name="PublicDemo" xml:space="preserve"><value>Public demo</value></data>
-  <data name="NoRegistration" xml:space="preserve"><value>ไม่ต้องสมัครสมาชิก</value></data>
-  <data name="DemoTitle" xml:space="preserve"><value>DEMO</value></data>
-  <data name="DemoSubtitle" xml:space="preserve"><value>ทดลองวางแผนงานร่วมกันแบบเรียลไทม์</value></data>
-  <data name="ReadyToTry" xml:space="preserve"><value>พร้อมทดลองใช้งาน</value></data>
-  <data name="PublicDemoArea" xml:space="preserve"><value>พื้นที่ทดลองแบบสาธารณะ</value></data>
-  <data name="HeroTitleLine1" xml:space="preserve"><value>จัดงานให้ชัด</value></data>
-  <data name="HeroTitleLine2" xml:space="preserve"><value>ทำงานร่วมกันได้ทันที</value></data>
-  <data name="HeroDescriptionLine1" xml:space="preserve"><value>ทดลองสร้าง ย้าย และแก้ไข Task บน Kanban board</value></data>
-  <data name="HeroDescriptionLine2" xml:space="preserve"><value>โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value></data>
-  <data name="FeatureListLabel" xml:space="preserve"><value>คุณสมบัติเด่น</value></data>
-  <data name="FeatureStartImmediately" xml:space="preserve"><value>เริ่มได้ทันที</value></data>
-  <data name="FeatureShareLink" xml:space="preserve"><value>แชร์ลิงก์ร่วมงาน</value></data>
-  <data name="FeatureTemporaryUsage" xml:space="preserve"><value>ใช้งานได้ 24 ชม.</value></data>
-  <data name="StartTrial" xml:space="preserve"><value>เริ่มทดลองใช้งาน</value></data>
-  <data name="TrialNote" xml:space="preserve"><value>ระบบจะสร้างบอร์ดตัวอย่างและชื่อผู้ใช้แบบสุ่มให้คุณ</value></data>
-  <data name="DisclaimerLabel" xml:space="preserve"><value>ข้อควรทราบก่อนทดลองใช้งาน</value></data>
-  <data name="DisclaimerTitle" xml:space="preserve"><value>เว็บไซต์นี้เป็นผลงาน Portfolio / Resume</value></data>
-  <data name="DisclaimerBody" xml:space="preserve"><value>ข้อมูลบนบอร์ดเป็นข้อมูลชั่วคราวและอาจถูกลบเมื่อครบ 24 ชั่วโมงหรือมีการรีเซ็ตระบบ กรุณาอย่าใส่ข้อมูลส่วนตัวหรือข้อมูลสำคัญ</value></data>
-  <data name="GitHubLinkText" xml:space="preserve"><value>ดู Source code บน GitHub</value></data>
-  <data name="GitHubLinkLabel" xml:space="preserve"><value>ดู Source code ของ TaskFlow บน GitHub (เปิดแท็บใหม่)</value></data>
-  <data name="AppName" xml:space="preserve"><value>TaskFlow</value></data>
-  <data name="BoardCloseMenu" xml:space="preserve"><value>ปิดเมนู</value></data>
-  <data name="BoardNavigationLabel" xml:space="preserve"><value>เมนู Board</value></data>
-  <data name="BoardCreateDescription" xml:space="preserve"><value>เริ่มต้นการทำงานร่วมกัน</value></data>
-  <data name="BoardGuestAccount" xml:space="preserve"><value>Guest account</value></data>
-  <data name="BoardUserMenu" xml:space="preserve"><value>เมนูผู้ใช้</value></data>
-  <data name="BoardOpenMenu" xml:space="preserve"><value>เปิดเมนู</value></data>
-  <data name="BoardReady" xml:space="preserve"><value>พร้อมใช้งาน</value></data>
-  <data name="BoardMembersLabel" xml:space="preserve"><value>สมาชิกในบอร์ด</value></data>
-  <data name="BoardAddTask" xml:space="preserve"><value>เพิ่มงานใหม่</value></data>
-  <data name="BoardKanbanLabel" xml:space="preserve"><value>Kanban board</value></data>
-  <data name="BoardViewLabel" xml:space="preserve"><value>มุมมอง Board</value></data>
-  <data name="BoardTab" xml:space="preserve"><value>Board</value></data>
-  <data name="BoardEditHint" xml:space="preserve"><value>แก้ไขชื่อและคำอธิบายบอร์ด</value></data>
-  <data name="BoardOwnerOnlyHint" xml:space="preserve"><value>เฉพาะผู้สร้างบอร์ดเท่านั้นที่แก้ไขได้</value></data>
-  <data name="BoardManage" xml:space="preserve"><value>จัดการบอร์ด</value></data>
-  <data name="BoardReset" xml:space="preserve"><value>รีเซ็ตบอร์ด</value></data>
-  <data name="BoardCreateDialogDescription" xml:space="preserve"><value>ตั้งชื่อพื้นที่ทำงานสำหรับทีมของคุณ</value></data>
-  <data name="BoardCloseDialog" xml:space="preserve"><value>ปิดหน้าต่าง</value></data>
-  <data name="BoardNameLabel" xml:space="preserve"><value>ชื่อบอร์ด</value></data>
-  <data name="BoardNamePlaceholder" xml:space="preserve"><value>เช่น Product Launch Q4</value></data>
-  <data name="BoardDescriptionLabel" xml:space="preserve"><value>คำอธิบาย</value></data>
-  <data name="BoardDescriptionPlaceholder" xml:space="preserve"><value>อธิบายเป้าหมายของบอร์ดนี้</value></data>
-  <data name="BoardCancel" xml:space="preserve"><value>ยกเลิก</value></data>
-  <data name="BoardCreateSubmit" xml:space="preserve"><value>สร้างบอร์ด</value></data>
-  <data name="BoardUpdateDialogDescription" xml:space="preserve"><value>แก้ไขชื่อและคำอธิบายของบอร์ด</value></data>
-  <data name="BoardSave" xml:space="preserve"><value>บันทึก</value></data>
-  <data name="BoardEmptyValue" xml:space="preserve"><value>—</value></data>
-  <data name="BoardPriorityLow" xml:space="preserve"><value>ต่ำ</value></data>
-  <data name="BoardPriorityMedium" xml:space="preserve"><value>ปานกลาง</value></data>
-  <data name="BoardPriorityHigh" xml:space="preserve"><value>สูง</value></data>
-  <data name="BoardDefaultName" xml:space="preserve"><value>บอร์ดใหม่</value></data>
-  <data name="BoardResetHint" xml:space="preserve"><value>ลบงานทั้งหมดและกลับเป็นบอร์ดเปล่า</value></data>
-  <data name="BoardResetConfirmation" xml:space="preserve"><value>ต้องการลบงานทั้งหมดในบอร์ด “{0}” ใช่ไหม? คอลัมน์และสมาชิกจะยังอยู่ การลบนี้ไม่สามารถย้อนกลับได้</value></data>
-  <data name="BoardResetConfirm" xml:space="preserve"><value>ยืนยันรีเซ็ตบอร์ด</value></data>
-  <data name="BoardUnassigned" xml:space="preserve"><value>ยังไม่มอบหมาย</value></data>
-  <data name="BoardStartDate" xml:space="preserve"><value>วันที่เริ่มต้น</value></data>
-  <data name="BoardDueDate" xml:space="preserve"><value>วันที่สิ้นสุด</value></data>
-  <data name="TaskCreateDescription" xml:space="preserve"><value>เพิ่มงานและกำหนดผู้รับผิดชอบในบอร์ดนี้</value></data>
-  <data name="TaskTitleLabel" xml:space="preserve"><value>ชื่องาน</value></data>
-  <data name="TaskTitlePlaceholder" xml:space="preserve"><value>เช่น ออกแบบ Landing Page</value></data>
-  <data name="TaskDescriptionPlaceholder" xml:space="preserve"><value>รายละเอียดงาน (รองรับการเก็บข้อความ Markdown)</value></data>
-  <data name="TaskColumnLabel" xml:space="preserve"><value>คอลัมน์</value></data>
-  <data name="TaskPriorityLabel" xml:space="preserve"><value>ความสำคัญ</value></data>
-  <data name="TaskAssigneeLabel" xml:space="preserve"><value>ผู้รับผิดชอบ</value></data>
-  <data name="TaskCreateSubmit" xml:space="preserve"><value>เพิ่มงาน</value></data>
-  <data name="TaskTitleValidation" xml:space="preserve"><value>กรุณาระบุชื่องานไม่เกิน 60 ตัวอักษร</value></data>
-  <data name="TaskDescriptionValidation" xml:space="preserve"><value>คำอธิบายต้องไม่เกิน 20,000 ตัวอักษร</value></data>
-  <data name="TaskPriorityValidation" xml:space="preserve"><value>กรุณาเลือกระดับความสำคัญที่ถูกต้อง</value></data>
-  <data name="TaskColumnValidation" xml:space="preserve"><value>กรุณาเลือกคอลัมน์ในบอร์ดนี้</value></data>
-  <data name="TaskAssigneeValidation" xml:space="preserve"><value>กรุณาเลือกผู้รับผิดชอบในบอร์ดนี้</value></data>
-  <data name="TaskDateValidation" xml:space="preserve"><value>วันที่สิ้นสุดต้องไม่อยู่ก่อนวันที่เริ่มต้น</value></data>
-  <data name="TaskInvalidDetails" xml:space="preserve"><value>ข้อมูลบางส่วนไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value></data>
-  <data name="TaskConcurrentChange" xml:space="preserve"><value>บอร์ดมีการเปลี่ยนแปลงระหว่างบันทึก กรุณาลองเพิ่มงานอีกครั้ง</value></data>
-  <data name="TaskInvalidDate" xml:space="preserve"><value>กรุณาระบุวันที่ที่ถูกต้อง</value></data>
-  <data name="TaskDefaultColumn" xml:space="preserve"><value>Backlog</value></data>
-  <data name="TaskBacklogMissing" xml:space="preserve"><value>ไม่พบคอลัมน์ Backlog ในบอร์ดนี้ จึงไม่สามารถเพิ่มงานได้</value></data>
-  <data name="TaskEditTitle" xml:space="preserve"><value>แก้ไข Task</value></data>
-  <data name="TaskEditDescription" xml:space="preserve"><value>แก้ไขรายละเอียดและผู้รับผิดชอบของงาน</value></data>
-  <data name="TaskDelete" xml:space="preserve"><value>ลบงาน</value></data>
-  <data name="TaskDeleteConfirmation" xml:space="preserve"><value>ต้องการลบงาน “{0}” ใช่ไหม? การลบนี้ไม่สามารถย้อนกลับได้</value></data>
-  <data name="TaskDeleteConfirm" xml:space="preserve"><value>ยืนยันลบงาน</value></data>
-  <data name="TaskOpenLabel" xml:space="preserve"><value>เปิดรายละเอียดและแก้ไขงาน {0}</value></data>
-  <data name="TaskEditConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง กรุณาปิดหน้าต่างแล้วเปิดงานใหม่เพื่อโหลดข้อมูลล่าสุดก่อนบันทึกหรือลบอีกครั้ง</value></data>
-  <data name="TaskColumnStepValidation" xml:space="preserve"><value>ย้ายงานได้ครั้งละ 1 คอลัมน์เท่านั้น กรุณาเลือกคอลัมน์ถัดไปหรือก่อนหน้า</value></data>
-  <data name="TaskDragHint" xml:space="preserve"><value>ลากงานเพื่อย้ายคอลัมน์ได้ครั้งละ 1 ขั้น ไปข้างหน้าหรือย้อนกลับ หรือเลือกคอลัมน์ในหน้าต่างแก้ไข</value></data>
-  <data name="TaskDragHandle" xml:space="preserve"><value>ลากเพื่อย้ายงาน</value></data>
-  <data name="TaskMoving" xml:space="preserve"><value>กำลังย้ายงาน...</value></data>
-  <data name="TaskMoveConcurrentChange" xml:space="preserve"><value>งานหรือบอร์ดมีการเปลี่ยนแปลง ระบบโหลดข้อมูลล่าสุดแล้ว กรุณาลองย้ายงานอีกครั้ง</value></data>
-  <data name="BoardShare" xml:space="preserve"><value>แชร์บอร์ด</value></data>
-  <data name="BoardShareDescription" xml:space="preserve"><value>ส่งลิงก์นี้ให้คนอื่นเข้ามาร่วมจัดการงาน</value></data>
-  <data name="BoardShareLinkLabel" xml:space="preserve"><value>ลิงก์บอร์ด</value></data>
-  <data name="BoardSharePermissions" xml:space="preserve"><value>ทุกคนที่มีลิงก์สามารถเข้าร่วม เพิ่ม แก้ไข ลบ และย้ายงานได้ แต่เฉพาะเจ้าของเท่านั้นที่จัดการและรีเซ็ตบอร์ดได้</value></data>
-  <data name="BoardShareExpiry" xml:space="preserve"><value>การแชร์หรือเข้าร่วมไม่ต่ออายุบอร์ด ลิงก์จะใช้ไม่ได้เมื่อบอร์ดหมดอายุ</value></data>
-  <data name="BoardShareCopy" xml:space="preserve"><value>คัดลอกลิงก์</value></data>
-  <data name="BoardShareCopied" xml:space="preserve"><value>คัดลอกลิงก์แล้ว</value></data>
-  <data name="BoardShareCopyFallback" xml:space="preserve"><value>คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์จากช่องด้านบน</value></data>
-  <data name="SharedBoardTitle" xml:space="preserve"><value>เข้าร่วมบอร์ด</value></data>
-  <data name="SharedBoardDescription" xml:space="preserve"><value>ร่วมเพิ่ม แก้ไข และย้ายงานในบอร์ดนี้ โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value></data>
-  <data name="JoinSharedBoard" xml:space="preserve"><value>เข้าร่วมบอร์ด</value></data>
-  <data name="SharedBoardTrialNote" xml:space="preserve"><value>ระบบจะสร้างชื่อ Guest แบบสุ่มให้คุณและเข้าบอร์ดนี้ โดยไม่สร้างบอร์ดใหม่</value></data>
-  <data name="SharedBoardUnavailableTitle" xml:space="preserve"><value>บอร์ดนี้ไม่พร้อมใช้งาน</value></data>
-  <data name="SharedBoardUnavailableDescription" xml:space="preserve"><value>ลิงก์อาจไม่ถูกต้องหรือบอร์ดหมดอายุแล้ว คุณสามารถเริ่มทดลองใช้งานเพื่อสร้างบอร์ดของคุณเองได้</value></data>
-  <data name="BoardOnlineMembersLabel" xml:space="preserve"><value>ผู้ที่ออนไลน์ในบอร์ด</value></data>
-  <data name="BoardOnlineMemberHint" xml:space="preserve"><value>ออนไลน์อยู่ในบอร์ดนี้</value></data>
-  <data name="TaskEditingBy" xml:space="preserve"><value>กำลังแก้ไขโดย</value></data>
-  <data name="BoardConcurrentChange" xml:space="preserve"><value>บอร์ดมีการเปลี่ยนแปลง ข้อมูลที่คุณกรอกยังอยู่ แต่ยังไม่ได้บันทึก กรุณาคัดลอกข้อความที่ต้องการเก็บแล้วโหลดข้อมูลล่าสุดก่อนแก้ไขอีกครั้ง</value></data>
-  <data name="BoardResetConcurrentChange" xml:space="preserve"><value>ไม่ได้รีเซ็ตบอร์ด เพราะบอร์ดมีการเปลี่ยนแปลงหรือข้อมูลเวอร์ชันไม่ถูกต้อง กรุณาตรวจสอบข้อมูลล่าสุดก่อนยืนยันรีเซ็ตอีกครั้ง</value></data>
-  <data name="BoardNameValidation" xml:space="preserve"><value>กรุณาระบุชื่อบอร์ดไม่เกิน 120 ตัวอักษร</value></data>
-  <data name="BoardDescriptionValidation" xml:space="preserve"><value>คำอธิบายบอร์ดต้องไม่เกิน 500 ตัวอักษร</value></data>
-  <data name="BoardInvalidDetails" xml:space="preserve"><value>ข้อมูลบอร์ดไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value></data>
-  <data name="BoardReload" xml:space="preserve"><value>โหลดข้อมูลล่าสุด</value></data>
+  <data name="PageTitle" xml:space="preserve">
+    <value>ทดลองจัดการงาน</value>
+  </data>
+  <data name="MainNavigationLabel" xml:space="preserve">
+    <value>เมนูหลัก</value>
+  </data>
+  <data name="HomeLinkLabel" xml:space="preserve">
+    <value>TaskFlow หน้าหลัก</value>
+  </data>
+  <data name="WorkspaceLabel" xml:space="preserve">
+    <value>WORKSPACE</value>
+  </data>
+  <data name="CreateBoard" xml:space="preserve">
+    <value>สร้างบอร์ดใหม่</value>
+  </data>
+  <data name="CreateBoardDescription" xml:space="preserve">
+    <value>เริ่มจัดการงานของคุณ</value>
+  </data>
+  <data name="PublicDemo" xml:space="preserve">
+    <value>Public demo</value>
+  </data>
+  <data name="NoRegistration" xml:space="preserve">
+    <value>ไม่ต้องสมัครสมาชิก</value>
+  </data>
+  <data name="DemoTitle" xml:space="preserve">
+    <value>DEMO</value>
+  </data>
+  <data name="DemoSubtitle" xml:space="preserve">
+    <value>ทดลองวางแผนงานร่วมกันแบบเรียลไทม์</value>
+  </data>
+  <data name="ReadyToTry" xml:space="preserve">
+    <value>พร้อมทดลองใช้งาน</value>
+  </data>
+  <data name="PublicDemoArea" xml:space="preserve">
+    <value>พื้นที่ทดลองแบบสาธารณะ</value>
+  </data>
+  <data name="HeroTitleLine1" xml:space="preserve">
+    <value>จัดงานให้ชัด</value>
+  </data>
+  <data name="HeroTitleLine2" xml:space="preserve">
+    <value>ทำงานร่วมกันได้ทันที</value>
+  </data>
+  <data name="HeroDescriptionLine1" xml:space="preserve">
+    <value>ทดลองสร้าง ย้าย และแก้ไข Task บน Kanban board</value>
+  </data>
+  <data name="HeroDescriptionLine2" xml:space="preserve">
+    <value>โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value>
+  </data>
+  <data name="FeatureListLabel" xml:space="preserve">
+    <value>คุณสมบัติเด่น</value>
+  </data>
+  <data name="FeatureStartImmediately" xml:space="preserve">
+    <value>เริ่มได้ทันที</value>
+  </data>
+  <data name="FeatureShareLink" xml:space="preserve">
+    <value>แชร์ลิงก์ร่วมงาน</value>
+  </data>
+  <data name="FeatureTemporaryUsage" xml:space="preserve">
+    <value>ใช้งานได้ 24 ชม.</value>
+  </data>
+  <data name="StartTrial" xml:space="preserve">
+    <value>เริ่มทดลองใช้งาน</value>
+  </data>
+  <data name="TrialNote" xml:space="preserve">
+    <value>ระบบจะสร้างบอร์ดตัวอย่างและชื่อผู้ใช้แบบสุ่มให้คุณ</value>
+  </data>
+  <data name="DisclaimerLabel" xml:space="preserve">
+    <value>ข้อควรทราบก่อนทดลองใช้งาน</value>
+  </data>
+  <data name="DisclaimerTitle" xml:space="preserve">
+    <value>เว็บไซต์นี้เป็นผลงาน Portfolio / Resume</value>
+  </data>
+  <data name="DisclaimerBody" xml:space="preserve">
+    <value>ข้อมูลบนบอร์ดเป็นข้อมูลชั่วคราวและอาจถูกลบเมื่อครบ 24 ชั่วโมงหรือมีการรีเซ็ตระบบ กรุณาอย่าใส่ข้อมูลส่วนตัวหรือข้อมูลสำคัญ</value>
+  </data>
+  <data name="GitHubLinkText" xml:space="preserve">
+    <value>ดู Source code บน GitHub</value>
+  </data>
+  <data name="GitHubLinkLabel" xml:space="preserve">
+    <value>ดู Source code ของ TaskFlow บน GitHub (เปิดแท็บใหม่)</value>
+  </data>
+  <data name="AppName" xml:space="preserve">
+    <value>TaskFlow</value>
+  </data>
+  <data name="BoardCloseMenu" xml:space="preserve">
+    <value>ปิดเมนู</value>
+  </data>
+  <data name="BoardNavigationLabel" xml:space="preserve">
+    <value>เมนู Board</value>
+  </data>
+  <data name="BoardCreateDescription" xml:space="preserve">
+    <value>เริ่มต้นการทำงานร่วมกัน</value>
+  </data>
+  <data name="BoardGuestAccount" xml:space="preserve">
+    <value>Guest account</value>
+  </data>
+  <data name="BoardUserMenu" xml:space="preserve">
+    <value>เมนูผู้ใช้</value>
+  </data>
+  <data name="BoardOpenMenu" xml:space="preserve">
+    <value>เปิดเมนู</value>
+  </data>
+  <data name="BoardReady" xml:space="preserve">
+    <value>พร้อมใช้งาน</value>
+  </data>
+  <data name="BoardMembersLabel" xml:space="preserve">
+    <value>สมาชิกในบอร์ด</value>
+  </data>
+  <data name="BoardAddTask" xml:space="preserve">
+    <value>เพิ่มงานใหม่</value>
+  </data>
+  <data name="BoardKanbanLabel" xml:space="preserve">
+    <value>Kanban board</value>
+  </data>
+  <data name="BoardViewLabel" xml:space="preserve">
+    <value>มุมมอง Board</value>
+  </data>
+  <data name="BoardTab" xml:space="preserve">
+    <value>Board</value>
+  </data>
+  <data name="BoardEditHint" xml:space="preserve">
+    <value>แก้ไขชื่อและคำอธิบายบอร์ด</value>
+  </data>
+  <data name="BoardOwnerOnlyHint" xml:space="preserve">
+    <value>เฉพาะผู้สร้างบอร์ดเท่านั้นที่แก้ไขได้</value>
+  </data>
+  <data name="BoardManage" xml:space="preserve">
+    <value>จัดการบอร์ด</value>
+  </data>
+  <data name="BoardReset" xml:space="preserve">
+    <value>รีเซ็ตบอร์ด</value>
+  </data>
+  <data name="BoardCreateDialogDescription" xml:space="preserve">
+    <value>ตั้งชื่อพื้นที่ทำงานสำหรับทีมของคุณ</value>
+  </data>
+  <data name="BoardCloseDialog" xml:space="preserve">
+    <value>ปิดหน้าต่าง</value>
+  </data>
+  <data name="BoardNameLabel" xml:space="preserve">
+    <value>ชื่อบอร์ด</value>
+  </data>
+  <data name="BoardNamePlaceholder" xml:space="preserve">
+    <value>เช่น Product Launch Q4</value>
+  </data>
+  <data name="BoardDescriptionLabel" xml:space="preserve">
+    <value>คำอธิบาย</value>
+  </data>
+  <data name="BoardDescriptionPlaceholder" xml:space="preserve">
+    <value>อธิบายเป้าหมายของบอร์ดนี้</value>
+  </data>
+  <data name="BoardCancel" xml:space="preserve">
+    <value>ยกเลิก</value>
+  </data>
+  <data name="BoardCreateSubmit" xml:space="preserve">
+    <value>สร้างบอร์ด</value>
+  </data>
+  <data name="BoardUpdateDialogDescription" xml:space="preserve">
+    <value>แก้ไขชื่อและคำอธิบายของบอร์ด</value>
+  </data>
+  <data name="BoardSave" xml:space="preserve">
+    <value>บันทึก</value>
+  </data>
+  <data name="BoardEmptyValue" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="BoardPriorityLow" xml:space="preserve">
+    <value>ต่ำ</value>
+  </data>
+  <data name="BoardPriorityMedium" xml:space="preserve">
+    <value>ปานกลาง</value>
+  </data>
+  <data name="BoardPriorityHigh" xml:space="preserve">
+    <value>สูง</value>
+  </data>
+  <data name="BoardDefaultName" xml:space="preserve">
+    <value>บอร์ดใหม่</value>
+  </data>
+  <data name="BoardResetHint" xml:space="preserve">
+    <value>ลบงานทั้งหมดและกลับเป็นบอร์ดเปล่า</value>
+  </data>
+  <data name="BoardResetConfirmation" xml:space="preserve">
+    <value>ต้องการลบงานทั้งหมดในบอร์ด “{0}” ใช่ไหม? คอลัมน์และสมาชิกจะยังอยู่ การลบนี้ไม่สามารถย้อนกลับได้</value>
+  </data>
+  <data name="BoardResetConfirm" xml:space="preserve">
+    <value>ยืนยันรีเซ็ตบอร์ด</value>
+  </data>
+  <data name="BoardUnassigned" xml:space="preserve">
+    <value>ยังไม่มอบหมาย</value>
+  </data>
+  <data name="BoardStartDate" xml:space="preserve">
+    <value>วันที่เริ่มต้น</value>
+  </data>
+  <data name="BoardDueDate" xml:space="preserve">
+    <value>วันที่สิ้นสุด</value>
+  </data>
+  <data name="TaskCreateDescription" xml:space="preserve">
+    <value>เพิ่มงานและกำหนดผู้รับผิดชอบในบอร์ดนี้</value>
+  </data>
+  <data name="TaskTitleLabel" xml:space="preserve">
+    <value>ชื่องาน</value>
+  </data>
+  <data name="TaskTitlePlaceholder" xml:space="preserve">
+    <value>เช่น ออกแบบ Landing Page</value>
+  </data>
+  <data name="TaskDescriptionPlaceholder" xml:space="preserve">
+    <value>รายละเอียดงาน</value>
+  </data>
+  <data name="TaskColumnLabel" xml:space="preserve">
+    <value>คอลัมน์</value>
+  </data>
+  <data name="TaskPriorityLabel" xml:space="preserve">
+    <value>ความสำคัญ</value>
+  </data>
+  <data name="TaskAssigneeLabel" xml:space="preserve">
+    <value>ผู้รับผิดชอบ</value>
+  </data>
+  <data name="TaskCreateSubmit" xml:space="preserve">
+    <value>เพิ่มงาน</value>
+  </data>
+  <data name="TaskTitleValidation" xml:space="preserve">
+    <value>กรุณาระบุชื่องานไม่เกิน 60 ตัวอักษร</value>
+  </data>
+  <data name="TaskDescriptionValidation" xml:space="preserve">
+    <value>คำอธิบายต้องไม่เกิน 20,000 ตัวอักษร</value>
+  </data>
+  <data name="TaskPriorityValidation" xml:space="preserve">
+    <value>กรุณาเลือกระดับความสำคัญที่ถูกต้อง</value>
+  </data>
+  <data name="TaskColumnValidation" xml:space="preserve">
+    <value>กรุณาเลือกคอลัมน์ในบอร์ดนี้</value>
+  </data>
+  <data name="TaskAssigneeValidation" xml:space="preserve">
+    <value>กรุณาเลือกผู้รับผิดชอบในบอร์ดนี้</value>
+  </data>
+  <data name="TaskDateValidation" xml:space="preserve">
+    <value>วันที่สิ้นสุดต้องไม่อยู่ก่อนวันที่เริ่มต้น</value>
+  </data>
+  <data name="TaskInvalidDetails" xml:space="preserve">
+    <value>ข้อมูลบางส่วนไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value>
+  </data>
+  <data name="TaskConcurrentChange" xml:space="preserve">
+    <value>บอร์ดมีการเปลี่ยนแปลงระหว่างบันทึก กรุณาลองเพิ่มงานอีกครั้ง</value>
+  </data>
+  <data name="TaskInvalidDate" xml:space="preserve">
+    <value>กรุณาระบุวันที่ที่ถูกต้อง</value>
+  </data>
+  <data name="TaskDefaultColumn" xml:space="preserve">
+    <value>Backlog</value>
+  </data>
+  <data name="TaskBacklogMissing" xml:space="preserve">
+    <value>ไม่พบคอลัมน์ Backlog ในบอร์ดนี้ จึงไม่สามารถเพิ่มงานได้</value>
+  </data>
+  <data name="TaskEditTitle" xml:space="preserve">
+    <value>แก้ไข Task</value>
+  </data>
+  <data name="TaskEditDescription" xml:space="preserve">
+    <value>แก้ไขรายละเอียดและผู้รับผิดชอบของงาน</value>
+  </data>
+  <data name="TaskDelete" xml:space="preserve">
+    <value>ลบงาน</value>
+  </data>
+  <data name="TaskDeleteConfirmation" xml:space="preserve">
+    <value>ต้องการลบงาน “{0}” ใช่ไหม? การลบนี้ไม่สามารถย้อนกลับได้</value>
+  </data>
+  <data name="TaskDeleteConfirm" xml:space="preserve">
+    <value>ยืนยันลบงาน</value>
+  </data>
+  <data name="TaskOpenLabel" xml:space="preserve">
+    <value>เปิดรายละเอียดและแก้ไขงาน {0}</value>
+  </data>
+  <data name="TaskEditConcurrentChange" xml:space="preserve">
+    <value>งานหรือบอร์ดมีการเปลี่ยนแปลง กรุณาปิดหน้าต่างแล้วเปิดงานใหม่เพื่อโหลดข้อมูลล่าสุดก่อนบันทึกหรือลบอีกครั้ง</value>
+  </data>
+  <data name="TaskColumnStepValidation" xml:space="preserve">
+    <value>ย้ายงานได้ครั้งละ 1 คอลัมน์เท่านั้น กรุณาเลือกคอลัมน์ถัดไปหรือก่อนหน้า</value>
+  </data>
+  <data name="TaskDragHint" xml:space="preserve">
+    <value>ลากงานเพื่อย้ายคอลัมน์ได้ครั้งละ 1 ขั้น ไปข้างหน้าหรือย้อนกลับ หรือเลือกคอลัมน์ในหน้าต่างแก้ไข</value>
+  </data>
+  <data name="TaskDragHandle" xml:space="preserve">
+    <value>ลากเพื่อย้ายงาน</value>
+  </data>
+  <data name="TaskMoving" xml:space="preserve">
+    <value>กำลังย้ายงาน...</value>
+  </data>
+  <data name="TaskMoveConcurrentChange" xml:space="preserve">
+    <value>งานหรือบอร์ดมีการเปลี่ยนแปลง ระบบโหลดข้อมูลล่าสุดแล้ว กรุณาลองย้ายงานอีกครั้ง</value>
+  </data>
+  <data name="BoardShare" xml:space="preserve">
+    <value>แชร์บอร์ด</value>
+  </data>
+  <data name="BoardShareDescription" xml:space="preserve">
+    <value>ส่งลิงก์นี้ให้คนอื่นเข้ามาร่วมจัดการงาน</value>
+  </data>
+  <data name="BoardShareLinkLabel" xml:space="preserve">
+    <value>ลิงก์บอร์ด</value>
+  </data>
+  <data name="BoardSharePermissions" xml:space="preserve">
+    <value>ทุกคนที่มีลิงก์สามารถเข้าร่วม เพิ่ม แก้ไข ลบ และย้ายงานได้ แต่เฉพาะเจ้าของเท่านั้นที่จัดการและรีเซ็ตบอร์ดได้</value>
+  </data>
+  <data name="BoardShareExpiry" xml:space="preserve">
+    <value>การแชร์หรือเข้าร่วมไม่ต่ออายุบอร์ด ลิงก์จะใช้ไม่ได้เมื่อบอร์ดหมดอายุ</value>
+  </data>
+  <data name="BoardShareCopy" xml:space="preserve">
+    <value>คัดลอกลิงก์</value>
+  </data>
+  <data name="BoardShareCopied" xml:space="preserve">
+    <value>คัดลอกลิงก์แล้ว</value>
+  </data>
+  <data name="BoardShareCopyFallback" xml:space="preserve">
+    <value>คัดลอกอัตโนมัติไม่ได้ กรุณาคัดลอกลิงก์จากช่องด้านบน</value>
+  </data>
+  <data name="SharedBoardTitle" xml:space="preserve">
+    <value>เข้าร่วมบอร์ด</value>
+  </data>
+  <data name="SharedBoardDescription" xml:space="preserve">
+    <value>ร่วมเพิ่ม แก้ไข และย้ายงานในบอร์ดนี้ โดยไม่ต้องสมัครสมาชิกหรือเข้าสู่ระบบ</value>
+  </data>
+  <data name="JoinSharedBoard" xml:space="preserve">
+    <value>เข้าร่วมบอร์ด</value>
+  </data>
+  <data name="SharedBoardTrialNote" xml:space="preserve">
+    <value>ระบบจะสร้างชื่อ Guest แบบสุ่มให้คุณและเข้าบอร์ดนี้ โดยไม่สร้างบอร์ดใหม่</value>
+  </data>
+  <data name="SharedBoardUnavailableTitle" xml:space="preserve">
+    <value>บอร์ดนี้ไม่พร้อมใช้งาน</value>
+  </data>
+  <data name="SharedBoardUnavailableDescription" xml:space="preserve">
+    <value>ลิงก์อาจไม่ถูกต้องหรือบอร์ดหมดอายุแล้ว คุณสามารถเริ่มทดลองใช้งานเพื่อสร้างบอร์ดของคุณเองได้</value>
+  </data>
+  <data name="BoardOnlineMembersLabel" xml:space="preserve">
+    <value>ผู้ที่ออนไลน์ในบอร์ด</value>
+  </data>
+  <data name="BoardOnlineMemberHint" xml:space="preserve">
+    <value>ออนไลน์อยู่ในบอร์ดนี้</value>
+  </data>
+  <data name="TaskEditingBy" xml:space="preserve">
+    <value>กำลังแก้ไขโดย</value>
+  </data>
+  <data name="BoardConcurrentChange" xml:space="preserve">
+    <value>บอร์ดมีการเปลี่ยนแปลง ข้อมูลที่คุณกรอกยังอยู่ แต่ยังไม่ได้บันทึก กรุณาคัดลอกข้อความที่ต้องการเก็บแล้วโหลดข้อมูลล่าสุดก่อนแก้ไขอีกครั้ง</value>
+  </data>
+  <data name="BoardResetConcurrentChange" xml:space="preserve">
+    <value>ไม่ได้รีเซ็ตบอร์ด เพราะบอร์ดมีการเปลี่ยนแปลงหรือข้อมูลเวอร์ชันไม่ถูกต้อง กรุณาตรวจสอบข้อมูลล่าสุดก่อนยืนยันรีเซ็ตอีกครั้ง</value>
+  </data>
+  <data name="BoardNameValidation" xml:space="preserve">
+    <value>กรุณาระบุชื่อบอร์ดไม่เกิน 120 ตัวอักษร</value>
+  </data>
+  <data name="BoardDescriptionValidation" xml:space="preserve">
+    <value>คำอธิบายบอร์ดต้องไม่เกิน 500 ตัวอักษร</value>
+  </data>
+  <data name="BoardInvalidDetails" xml:space="preserve">
+    <value>ข้อมูลบอร์ดไม่ถูกต้อง กรุณาตรวจสอบแล้วลองอีกครั้ง</value>
+  </data>
+  <data name="BoardReload" xml:space="preserve">
+    <value>โหลดข้อมูลล่าสุด</value>
+  </data>
+  <data name="TaskDatePlaceholder" xml:space="preserve"><value>เลือกวันที่</value></data>
+  <data name="TaskDateChoose" xml:space="preserve"><value>เปิดปฏิทินเพื่อเลือกวันที่</value></data>
+  <data name="TaskDateClear" xml:space="preserve"><value>ล้างวันที่</value></data>
+  <data name="TaskDateFormatError" xml:space="preserve"><value>แสดงวันที่ไทยไม่ได้ชั่วคราว ค่าวันที่ยังถูกเก็บไว้ กรุณาลองเปิดปฏิทินอีกครั้ง</value></data>
 </root>

@@ -7,7 +7,7 @@
         column.Tasks.Any(task => task.TaskItemId == Model.EditTask.TaskItemId));
 
     string FormatDate(DateOnly? value) =>
-        value?.ToString("dd MMM") ?? Text["BoardEmptyValue"].Value;
+        value?.ToShortThaiDatetime() ?? Text["BoardEmptyValue"].Value;
 }
 
 @section Styles {
@@ -90,10 +90,10 @@
 
             <div class="board-heading">
                 <div>
-                    <h1>@Model.Name</h1>
+                    <h1 title="@Model.Name">@Model.Name</h1>
                     <span class="board-live-status"><i></i>@Text["BoardReady"]</span>
                 </div>
-                <p>@Model.Description</p>
+                <p title="@Model.Description">@Model.Description</p>
             </div>
 
             <div class="board-header__actions">
@@ -103,6 +103,7 @@
                 </div>
 
                 <button class="board-primary-action" type="button"
+                        aria-label="@Text["BoardAddTask"]"
                         data-dialog-open="create-task-dialog">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                     @Text["BoardAddTask"]
@@ -203,11 +204,11 @@
                                             <span class="kanban-card__person-name">@task.AssigneeDisplayName</span>
                                         </div>
                                         <div class="kanban-card__dates">
-                                        <span class="kanban-card__date" title="@Text["BoardStartDate"]">
+                                        <span class="kanban-card__date" title="@task.StartDate?.ToFullThaiDatetime()">
                                             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></svg>
                                             @FormatDate(task.StartDate)
                                         </span>
-                                        <span class="kanban-card__date" title="@Text["BoardDueDate"]">
+                                        <span class="kanban-card__date" title="@task.DueDate?.ToFullThaiDatetime()">
                                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12V5H4v16h9M8 3v4M15 3v4M4 10h15m-5 9 3 3 5-6" /></svg>
                                             @FormatDate(task.DueDate)
                                         </span>
@@ -308,14 +309,8 @@
                 </select>
             </label>
             <div class="board-dialog__row">
-                <label class="board-dialog__field">
-                    <span>@Text["BoardStartDate"]</span>
-                    <input asp-for="CreateTask.StartDate" type="date" asp-format="{0:yyyy-MM-dd}" />
-                </label>
-                <label class="board-dialog__field">
-                    <span>@Text["BoardDueDate"]</span>
-                    <input asp-for="CreateTask.DueDate" type="date" asp-format="{0:yyyy-MM-dd}" />
-                </label>
+                <partial name="_ThaiDateField" model='new ThaiDateFieldViewModel("CreateTask.StartDate", "BoardStartDate", Model.CreateTask.StartDate)' />
+                <partial name="_ThaiDateField" model='new ThaiDateFieldViewModel("CreateTask.DueDate", "BoardDueDate", Model.CreateTask.DueDate)' />
             </div>
         </div>
         <footer class="board-dialog__actions">
@@ -388,14 +383,8 @@
                 </select>
             </label>
             <div class="board-dialog__row">
-                <label class="board-dialog__field">
-                    <span>@Text["BoardStartDate"]</span>
-                    <input asp-for="EditTask.StartDate" type="date" asp-format="{0:yyyy-MM-dd}" />
-                </label>
-                <label class="board-dialog__field">
-                    <span>@Text["BoardDueDate"]</span>
-                    <input asp-for="EditTask.DueDate" type="date" asp-format="{0:yyyy-MM-dd}" />
-                </label>
+                <partial name="_ThaiDateField" model='new ThaiDateFieldViewModel("EditTask.StartDate", "BoardStartDate", Model.EditTask.StartDate)' />
+                <partial name="_ThaiDateField" model='new ThaiDateFieldViewModel("EditTask.DueDate", "BoardDueDate", Model.EditTask.DueDate)' />
             </div>
         </div>
         <footer class="board-dialog__actions">
@@ -432,51 +421,10 @@
     </form>
 </dialog>
 
-<dialog class="board-dialog" id="create-board-dialog">
-    <form class="board-dialog__form"
-          asp-controller="Boards"
-          asp-action="Create"
-          method="post">
-        <header class="board-dialog__header">
-            <div>
-                <h2>@Text["CreateBoard"]</h2>
-                <p>@Text["BoardCreateDialogDescription"]</p>
-            </div>
-            <button type="button"
-                    class="board-dialog__close"
-                    data-dialog-close
-                    aria-label="@Text["BoardCloseDialog"]">×</button>
-        </header>
-
-        <div class="board-dialog__content">
-            <label class="board-dialog__field">
-                <span>@Text["BoardNameLabel"] <i>*</i></span>
-                <input name="name"
-                       type="text"
-                       maxlength="120"
-                       required
-                       autocomplete="off"
-                       placeholder="@Text["BoardNamePlaceholder"]"
-                       data-dialog-initial-focus />
-            </label>
-
-            <label class="board-dialog__field">
-                <span>@Text["BoardDescriptionLabel"]</span>
-                <textarea name="description"
-                          maxlength="500"
-                          rows="3"
-                          placeholder="@Text["BoardDescriptionPlaceholder"]"></textarea>
-            </label>
-        </div>
-
-        <footer class="board-dialog__actions">
-            <button class="board-dialog__button board-dialog__button--secondary"
-                    type="button"
-                    data-dialog-close>@Text["BoardCancel"]</button>
-            <button class="board-dialog__button board-dialog__button--primary"
-                    type="submit">@Text["BoardCreateSubmit"]</button>
-        </footer>
-    </form>
+<dialog class="board-dialog" id="create-board-dialog"
+        data-dialog-auto-open="@(Model.ShowCreateBoardDialog ? "true" : null)"
+        aria-labelledby="create-board-title">
+    <partial name="_CreateBoardForm" model="Model.CreateBoard" />
 </dialog>
 
 <dialog class="board-dialog" id="update-board-dialog"
@@ -568,5 +516,6 @@
 @section Scripts {
     <script src="~/lib/microsoft/signalr/dist/browser/signalr.js" asp-append-version="true"></script>
     <script src="~/js/board.js" asp-append-version="true"></script>
+    <script src="~/js/thai-date.js" asp-append-version="true"></script>
     <script src="~/js/board-realtime.js" asp-append-version="true"></script>
 }

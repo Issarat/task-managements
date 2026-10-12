@@ -55,6 +55,10 @@ public static class DatetimeExtensions
             .ToString(ShortThaiDateFormat, ThaiCulture);
     }
 
+    /// <summary>Gregorian ISO value for HTML date controls and transport, never Buddhist Era.</summary>
+    public static string ToIsoDateString(this DateOnly date) =>
+        date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
     private static DateTime ToBangkokTime(DateTime utcDateTime)
     {
         // SQL Server datetime2 does not preserve DateTime.Kind. Values read by

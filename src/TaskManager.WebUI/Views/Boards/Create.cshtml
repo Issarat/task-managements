@@ -1,0 +1,12 @@
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> Text
+@model CreateBoardFormModel
+@{
+    ViewData["Title"] = Text["CreateBoard"];
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/board.css" asp-append-version="true" />
+}
+<main class="board-create-page" aria-labelledby="create-board-title">
+    <partial name="_CreateBoardForm" model="Model" />
+</main>

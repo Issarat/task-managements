@@ -125,6 +125,43 @@ in `finally`. It never uses the application's connection string or the demo
 Checks include synchronized independent-task and same-task writes, parallel
 creation ordering, stale update/delete/move, board editing, and atomic reset.
 
+## Thai date presentation
+
+`DatetimeExtensions` is the source of full Thai (`8 ตุลาคม 2569`), short Thai
+(`8 ต.ค. 69`) and Gregorian ISO (`2026-10-08`) date formats. Task cards use short
+dates with full-date tooltips. Create/edit date fields show full Thai text with
+a calendar button; their native date inputs still submit Gregorian ISO values.
+The picker uses the browser calendar, and clearing a date submits an empty
+nullable value. Browsers without `showPicker` retain their native date controls.
+
+`/dates/format` formats only the supplied ISO date via these extensions, with no
+DB/session access. The browser requests it after selection and never calculates
+the Buddhist year itself. Older responses cannot overwrite newer selections;
+format failures retain the actual ISO value with a retry message. `DateOnly`
+is never timezone-shifted; UTC `DateTime` timestamps are converted to Bangkok
+only for display. Storage and date model binding remain Gregorian.
+
+```text
+node tests/thai-date.checks.cjs
+```
+
+## Board creation validation
+
+Board creation validates model-binding errors and trimmed name/description
+lengths (120/500 characters) before calling the service. Invalid submissions
+reopen the creation dialog on an existing board with the original draft and
+localized errors. A guest with no surviving boards gets a standalone version
+of the same form instead; rendering errors never seeds a board or new guest.
+The return-board field is resolved only against that guest's active memberships,
+never used as an external redirect or an instruction to join another board.
+
+The shared form retains flat `Name`/`Description` fields compatible with the
+landing page's lowercase fields, antiforgery protection and HTML-encoded drafts.
+Service argument validation is displayed as a form error, not a 500. Successful
+creation still sets the owner cookie and redirects; the existing missing/blank
+name fallback and no-sample-data behavior are unchanged. HTTP regression checks
+exercise actual MVC binding, Razor form rendering and antiforgery on fake data.
+
 ## Expired demo data cleanup
 
 The app runs a cleanup once on startup and every 5 minutes while it is running.

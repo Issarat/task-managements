@@ -6,6 +6,24 @@
   background: #f5f7fb;
 }
 
+.board-create-page {
+  width: min(520px, calc(100% - 32px));
+  margin: 48px auto;
+}
+
+.board-create-page .board-dialog__form {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.board-create-page a.board-dialog__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .board-sidebar {
   position: sticky;
   top: 0;
@@ -253,16 +271,23 @@
 }
 
 .board-heading {
+  flex: 1 1 0;
   min-width: 0;
 }
 
 .board-heading > div {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 9px;
 }
 
 .board-heading h1 {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0;
   font-size: clamp(var(--text-xl), 1.5vw, 1.5rem);
   font-weight: 780;
@@ -270,6 +295,12 @@
 }
 
 .board-heading p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
   margin: 5px 0 0;
   color: #8692a6;
   font-size: var(--text-sm);
@@ -277,6 +308,8 @@
 
 .board-live-status {
   display: inline-flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
   align-items: center;
   gap: 5px;
   color: #15935e;
@@ -294,6 +327,7 @@
 
 .board-header__actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 16px;
   margin-left: auto;
@@ -325,6 +359,8 @@
 
 .board-primary-action {
   display: inline-flex;
+  flex: 0 0 auto;
+  white-space: nowrap;
   height: 39px;
   align-items: center;
   gap: 7px;
@@ -340,6 +376,7 @@
 }
 
 .board-primary-action svg {
+  flex: 0 0 auto;
   width: 15px;
   height: 15px;
 }
@@ -873,6 +910,47 @@
   font-size: var(--text-sm);
   font-weight: 700;
 }
+
+.board-dialog__field > label {
+  color: #344054;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.thai-date-control { position: relative; }
+.thai-date-control.is-enhanced .thai-date-source {
+  position: absolute;
+  top: 100%;
+  right: 12px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.thai-date-control.is-enhanced .thai-date-display { padding-right: 72px; cursor: pointer; }
+.thai-date-open, .thai-date-clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: grid;
+  width: 28px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  color: #64748b;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.thai-date-clear { right: 38px; font-size: 20px; }
+.thai-date-open svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+.thai-date-open:hover, .thai-date-clear:hover { background: #f1f5f9; }
+.thai-date-open:focus-visible, .thai-date-clear:focus-visible { outline: 2px solid #2563eb; }
+.thai-date-control [hidden] { display: none; }
+[data-date-status] { color: #b45309; font-size: var(--text-xs); }
 
 .board-dialog__field i {
   color: #ef4444;

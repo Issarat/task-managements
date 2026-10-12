@@ -125,8 +125,7 @@ public sealed class BoardsController(
     [HttpPost("/boards/create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(
-        string? name,
-        string? description,
+        CreateBoardFormModel form,
         CancellationToken cancellationToken)
     {
         var guest = await GetCurrentGuestAsync(cancellationToken);
@@ -135,22 +134,63 @@ public sealed class BoardsController(
             return RedirectToAction(nameof(HomeController.Index), "Home");
         }
 
-        var created = await boardService.CreateAsync(
-            new CreateBoardRequestModel(
-                guest.Id,
-                string.IsNullOrWhiteSpace(name) ? text["BoardDefaultName"].Value : name,
-                description,
-                guest.ExpiresAtUtc),
-            cancellationToken);
+        // Flat field names preserve compatibility with the landing-page form.
+        // Match the service's trimming rules and keep the existing default name.
+        if (form.Name?.Trim().Length > 120)
+            ModelState.AddModelError(nameof(form.Name), text["BoardNameValidation"]);
+        if (form.Description?.Trim().Length > 500)
+            ModelState.AddModelError(nameof(form.Description), text["BoardDescriptionValidation"]);
 
-        boardOwnerCookieService.SetToken(
-            created.Board.PublicId,
-            created.OwnerToken,
-            created.Board.ExpiresAtUtc);
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                var created = await boardService.CreateAsync(
+                    new CreateBoardRequestModel(
+                        guest.Id,
+                        string.IsNullOrWhiteSpace(form.Name) ? text["BoardDefaultName"].Value : form.Name,
+                        form.Description,
+                        guest.ExpiresAtUtc),
+                    cancellationToken);
 
-        return RedirectToAction(
-            nameof(Index),
-            new { publicId = created.Board.PublicId });
+                boardOwnerCookieService.SetToken(
+                    created.Board.PublicId,
+                    created.OwnerToken,
+                    created.Board.ExpiresAtUtc);
+
+                return RedirectToAction(nameof(Index), new { publicId = created.Board.PublicId });
+            }
+            catch (ArgumentException)
+            {
+                ModelState.AddModelError(string.Empty, text["BoardInvalidDetails"]);
+            }
+        }
+
+        var navigation = await boardService.GetListBySessionIdAsync(guest.Id, cancellationToken);
+        ModelState.Remove(nameof(form.ReturnBoardPublicId));
+        // Never use a posted URL or enroll the guest in an arbitrary return board.
+        var returnBoard = navigation.FirstOrDefault(board => board.PublicId == form.ReturnBoardPublicId)
+            ?? navigation.FirstOrDefault();
+        if (returnBoard is not null)
+        {
+            var board = await boardService.GetAsync(returnBoard.PublicId, guest.Id, cancellationToken);
+            if (board is not null)
+            {
+                form.ReturnBoardPublicId = board.Board.PublicId;
+                var page = MapPage(board, navigation, guest,
+                    !string.IsNullOrWhiteSpace(boardOwnerCookieService.GetToken(board.Board.PublicId))) with
+                {
+                    CreateBoard = form,
+                    ShowCreateBoardDialog = true
+                };
+                return View("Index", page);
+            }
+        }
+
+        // A valid guest can have no surviving boards. Still show their draft,
+        // without creating a sample board/guest just to render a validation error.
+        form.ReturnBoardPublicId = null;
+        return View("Create", form);
     }
 
     [HttpPost("/boards/{publicId}/update")]
@@ -611,6 +651,7 @@ public sealed class BoardsController(
             columns)
         {
             BoardRowVersion = Convert.ToBase64String(response.Board.RowVersion),
+            CreateBoard = new CreateBoardFormModel { ReturnBoardPublicId = response.Board.PublicId },
             EditBoard = new EditBoardFormModel
             {
                 Name = response.Board.Name,

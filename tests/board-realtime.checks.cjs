@@ -463,5 +463,32 @@ function assignees(e, selected = 'participant-a') {
         e.handlers.BoardPresenceChanged({ publicId: 'board-a', revision: 1, members: [{ guestId: 'stale' }] });
         assert.equal(e.timers.size, 0);
     });
+    await check('invalid board creation auto-opens its dialog and focuses the preserved name draft', async () => {
+        const e = environment();
+        class Input {
+            value = 'x'.repeat(121);
+            focus() { this.focused = true; }
+            select() { this.selected = true; }
+        }
+        const input = new Input();
+        class Dialog {
+            id = 'create-board-dialog';
+            dataset = { dialogAutoOpen: 'true' };
+            open = false;
+            showModal() { this.open = true; }
+            querySelector() { return input; }
+            addEventListener() {}
+        }
+        const dialog = new Dialog();
+        e.document.querySelector = selector => selector === '[data-board-screen]' ? e.board : null;
+        e.document.querySelectorAll = selector => selector === 'dialog' ? [dialog] : [];
+        Object.assign(e.context, { HTMLInputElement: Input, HTMLDialogElement: Dialog,
+            HTMLFormElement: class {}, URL });
+        vm.runInNewContext(interactionScript, e.context);
+        assert.equal(dialog.open, true);
+        assert.equal(input.focused, true); assert.equal(input.selected, true);
+        assert.equal(input.value, 'x'.repeat(121));
+        assert.equal(e.calls.events.includes('board:task-editing-changed'), false);
+    });
     console.log(`${passed} checks passed.`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

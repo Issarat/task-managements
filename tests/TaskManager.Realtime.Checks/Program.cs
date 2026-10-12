@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using TaskManager.Application.Interfaces;
 using TaskManager.Application.Models;
 using TaskManager.Domain.Enums;
+using TaskManager.Domain.Extensions;
+using System.Globalization;
 using TaskManager.WebUI;
 using TaskManager.WebUI.Controllers;
 using TaskManager.WebUI.Hubs;
@@ -30,8 +32,16 @@ builder.Services.AddSingleton<TimeProvider>(liveClock);
 builder.Services.AddSingleton<BoardPresenceService>();
 builder.Services.AddSingleton<IGuestService>(guests);
 builder.Services.AddSingleton<IBoardService>(boards);
+builder.Services.AddSingleton<ITaskService>(tasks);
+builder.Services.AddSingleton<IStringLocalizer<SharedResource>>(new FakeText());
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<GuestCookieService>();
+builder.Services.AddScoped<BoardOwnerCookieService>();
+builder.Services.AddControllersWithViews().AddApplicationPart(typeof(BoardsController).Assembly);
 await using var app = builder.Build();
+app.UseRequestLocalization("th-TH");
 app.MapHub<BoardHub>("/hubs/board");
+app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
 await app.StartAsync();
 var address = app.Urls.Single();
 await using var a = await HubSocket.Connect(address, "test-a");
@@ -42,6 +52,32 @@ await using var expired = await HubSocket.Connect(address, "expired");
 var passed = 0;
 void Pass(string name) { passed++; Console.WriteLine($"PASS {name}"); }
 void Require(bool condition, string name) { if (!condition) throw new Exception(name); }
+
+var formattingDate = new DateOnly(2026, 10, 8);
+var originalCulture = CultureInfo.CurrentCulture;
+try
+{
+    foreach (var culture in new[] { "en-US", "th-TH", "ar-SA" })
+    {
+        CultureInfo.CurrentCulture = new CultureInfo(culture);
+        Require(formattingDate.ToFullThaiDatetime() == "8 ตุลาคม 2569"
+            && formattingDate.ToShortThaiDatetime() == "8 ต.ค. 69"
+            && formattingDate.ToIsoDateString() == "2026-10-08", "central date formats are independent of request culture");
+    }
+}
+finally { CultureInfo.CurrentCulture = originalCulture; }
+Pass("DatetimeExtensions centrally formats full/short Buddhist dates and Gregorian ISO under different cultures");
+var boundaryUtc = new DateTime(2026, 10, 7, 18, 0, 0, DateTimeKind.Utc);
+Require(boundaryUtc.ToFullThaiDatetime() == "8 ตุลาคม 2569"
+    && DateTime.SpecifyKind(boundaryUtc, DateTimeKind.Unspecified).ToFullThaiDatetime() == "8 ตุลาคม 2569"
+    && boundaryUtc.ToLocalTime().ToFullThaiDatetime() == "8 ตุลาคม 2569", "UTC/SQL unspecified/local represent the same Bangkok date");
+Pass("UTC midnight rollover and SQL datetime2 Kind normalization produce the correct Bangkok date");
+Require(new DateOnly(2026, 10, 7).ToFullThaiDatetime() == "7 ตุลาคม 2569",
+    "date-only values must never receive a timezone shift");
+Pass("DateOnly task dates are formatted without UTC conversion or day changes");
+Require(new DateOnly(2024, 2, 29).ToShortThaiDatetime() == "29 ก.พ. 67"
+    && new DateOnly(2024, 2, 29).ToIsoDateString() == "2024-02-29", "leap day formats correctly");
+Pass("leap-day dates keep Gregorian storage and Buddhist display years");
 
 Require(await a.Join("board-a"), "A joins");
 Require(await b.Join("board-a"), "B joins");
@@ -111,6 +147,143 @@ BoardsController Controller(bool owner = true, IHubContext<BoardHub>? hub = null
     { ControllerContext = new ControllerContext { HttpContext = context },
         TempData = new TempDataDictionary(context, new MemoryTempDataProvider()) };
 }
+// Board creation validation must happen before persistence or owner-cookie issuance.
+foreach (var draft in new[] {
+    new CreateBoardFormModel { Name = new string('n', 121), Description = "Keep this description", ReturnBoardPublicId = "board-a" },
+    new CreateBoardFormModel { Name = "Keep this name", Description = new string('d', 501), ReturnBoardPublicId = "board-a" }
+})
+{
+    boards.Saved = false;
+    var controller = Controller();
+    var result = await controller.Create(draft, default);
+    Require(result is ViewResult { ViewName: "Index", Model: BoardPageViewModel { ShowCreateBoardDialog: true } page }
+        && ReferenceEquals(page.CreateBoard, draft) && page.CreateBoard.ReturnBoardPublicId == "board-a",
+        "preserve invalid creation draft on its current board");
+    Require(!controller.ModelState.IsValid && !boards.Saved && boards.CreateCalls == 0
+        && !controller.Response.Headers.ContainsKey("Set-Cookie"), "invalid create cannot save or issue owner cookie");
+}
+Pass("oversized board name/description preserve the draft and reopen the create dialog without saving");
+var malformedCreate = Controller();
+malformedCreate.ModelState.AddModelError("Name", "Binding failed");
+Require(await malformedCreate.Create(new CreateBoardFormModel { Name = "Valid" }, default) is ViewResult
+    && boards.CreateCalls == 0, "preexisting binding errors also block creation");
+Pass("board creation respects binding errors before calling the service");
+foreach (var returnId in new[] { "https://evil.example/", "board-b" })
+{
+    var result = await Controller().Create(new CreateBoardFormModel {
+        Name = new string('n', 121), ReturnBoardPublicId = returnId }, default);
+    Require(result is ViewResult { Model: BoardPageViewModel page } && page.PublicId == "board-a"
+        && page.CreateBoard.ReturnBoardPublicId == "board-a" && boards.LastReadBoardPublicId == "board-a",
+        "untrusted return destination cannot redirect or enroll another board");
+}
+Pass("invalid creates return only to an existing guest membership, never a posted external/other-board destination");
+boards.HideNavigation = true;
+var noBoardsDraft = new CreateBoardFormModel { Name = new string('n', 121), Description = "Keep me" };
+Require(await Controller().Create(noBoardsDraft, default) is ViewResult { ViewName: "Create", Model: CreateBoardFormModel noBoards }
+    && ReferenceEquals(noBoards, noBoardsDraft) && boards.CreateCalls == 0, "no surviving board still returns draft form");
+boards.HideNavigation = false;
+Pass("guest with no surviving boards gets a standalone validation form without seeding anything");
+Require(await Controller(guest: false).Create(new CreateBoardFormModel { Name = "Valid" }, default)
+    is RedirectToActionResult { ControllerName: "Home" } && boards.CreateCalls == 0, "creation still requires a guest");
+Pass("board creation with no guest cannot persist or issue ownership");
+boards.AllowCreate = true;
+boards.ThrowCreateArgument = true;
+var rejectedCreate = Controller();
+Require(await rejectedCreate.Create(new CreateBoardFormModel { Name = "Draft", Description = "Retain" }, default)
+    is ViewResult { Model: BoardPageViewModel { ShowCreateBoardDialog: true } rejectedPage }
+    && rejectedPage.CreateBoard.Description == "Retain" && !rejectedCreate.ModelState.IsValid
+    && !rejectedCreate.Response.Headers.ContainsKey("Set-Cookie"), "service validation must not become a 500");
+boards.ThrowCreateArgument = false;
+Pass("service-level argument validation returns creation draft without a 500 or ownership cookie");
+foreach (var name in new string?[] { new string('n', 120), null, "   ", " " + new string('n', 120) + " " })
+{
+    var successful = Controller();
+    var result = await successful.Create(new CreateBoardFormModel { Name = name, Description = new string('d', 500) }, default);
+    Require(result is RedirectToActionResult redirect && redirect.RouteValues?["publicId"] as string == "created-board"
+        && boards.Saved && successful.Response.Headers["Set-Cookie"].ToString().Contains("taskflow_board_owner_created-board"),
+        "valid creation still redirects and issues ownership");
+    Require(boards.LastCreatedRequest?.IncludeSampleData == false
+        && boards.LastCreatedRequest.Name == (string.IsNullOrWhiteSpace(name) ? "BoardDefaultName" : name),
+        "keep default name and no sample seed behavior");
+}
+boards.AllowCreate = false;
+boards.CreateCalls = 0;
+Pass("valid boundary lengths, trimmed values and the existing default-name behavior still create normally");
+
+// Exercise real MVC binding, Razor partial prefixes and antiforgery on the fake host.
+using (var http = new HttpClient(new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false }))
+{
+    http.DefaultRequestHeaders.Add("Cookie", "taskflow_guest=test-a");
+    var get = await http.GetAsync(address + "/boards/board-a");
+    var markup = await get.Content.ReadAsStringAsync();
+    Require(get.IsSuccessStatusCode && markup.Contains("name=\"Name\"")
+        && !markup.Contains("name=\"CreateBoard.Name\""), "shared partial has flat compatible names");
+    var token = System.Text.RegularExpressions.Regex.Match(markup,
+        "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"").Groups[1].Value;
+    Require(token.Length > 0, "Razor form contains antiforgery token");
+    var cookie = get.Headers.GetValues("Set-Cookie").Single(value => value.StartsWith(".AspNetCore.Antiforgery.")).Split(';')[0];
+    http.DefaultRequestHeaders.Remove("Cookie");
+    http.DefaultRequestHeaders.Add("Cookie", "taskflow_guest=test-a; " + cookie);
+    var formattedResponse = await http.GetAsync(address + "/dates/format?value=2026-10-08");
+    using (var formattedJson = JsonDocument.Parse(await formattedResponse.Content.ReadAsStringAsync()))
+        Require(formattedResponse.IsSuccessStatusCode
+            && formattedJson.RootElement.GetProperty("value").GetString() == "2026-10-08"
+            && formattedJson.RootElement.GetProperty("full").GetString() == "8 ตุลาคม 2569"
+            && formattedJson.RootElement.GetProperty("shortText").GetString() == "8 ต.ค. 69", "formatter endpoint uses central extensions");
+    Pass("real date-format HTTP endpoint returns Thai dates with the exact Gregorian ISO value");
+    foreach (var badDate in new[] { "2026-02-30", "08/10/2026", "2026-10-8", "0000-01-01", "10000-01-01", "" })
+        Require((await http.GetAsync(address + "/dates/format?value=" + Uri.EscapeDataString(badDate))).StatusCode
+            == System.Net.HttpStatusCode.BadRequest, "invalid date formatter input is rejected");
+    Pass("date formatter rejects invalid calendar dates and non-ISO inputs without a 500");
+    var editingMarkup = System.Net.WebUtility.HtmlDecode(await http.GetStringAsync(address + "/boards/board-a?taskId=" + boards.TaskId));
+    Require(editingMarkup.Contains("name=\"EditTask.StartDate\" value=\"2026-10-12\"")
+        && editingMarkup.Contains("name=\"EditTask.DueDate\" value=\"2026-10-19\"")
+        && editingMarkup.Contains("value=\"12 ตุลาคม 2569\"") && editingMarkup.Contains("value=\"19 ตุลาคม 2569\"")
+        && editingMarkup.Contains("12 ต.ค. 69") && editingMarkup.Contains("19 ต.ค. 69"), "Razor dates use extensions, native fields stay Gregorian");
+    Pass("real edit form renders full Thai dates, short card dates and Gregorian native inputs under th-TH");
+    var datePost = await http.PostAsync(address + "/boards/board-a/tasks/create", new FormUrlEncodedContent(new Dictionary<string, string> {
+        ["CreateTask.Title"] = "", ["CreateTask.StartDate"] = "2026-10-08", ["CreateTask.DueDate"] = "2026-10-09",
+        ["__RequestVerificationToken"] = token }));
+    var datePostMarkup = System.Net.WebUtility.HtmlDecode(await datePost.Content.ReadAsStringAsync());
+    Require(datePost.IsSuccessStatusCode && datePostMarkup.Contains("name=\"CreateTask.StartDate\" value=\"2026-10-08\"")
+        && datePostMarkup.Contains("value=\"8 ตุลาคม 2569\"") && datePostMarkup.Contains("value=\"9 ตุลาคม 2569\""),
+        "validation rerender preserves dates and invariant model binding");
+    Pass("real Thai-culture date POST round-trips ISO dates and preserves Thai display on validation errors");
+    var invalidDatePost = await http.PostAsync(address + "/boards/board-a/tasks/create", new FormUrlEncodedContent(new Dictionary<string, string> {
+        ["CreateTask.Title"] = "", ["CreateTask.StartDate"] = "2026-02-30", ["__RequestVerificationToken"] = token }));
+    Require(invalidDatePost.IsSuccessStatusCode && (await invalidDatePost.Content.ReadAsStringAsync()).Contains("TaskInvalidDate"),
+        "invalid bound date remains a validation error");
+    Pass("invalid task date POST returns validation instead of silently changing the date or throwing");
+    var longName = new string('x', 121);
+    var unsafeDescription = "</textarea><script>alert(1)</script>" + new string('d', 501);
+    var post = await http.PostAsync(address + "/boards/create", new FormUrlEncodedContent(new Dictionary<string, string> {
+        ["name"] = longName, ["description"] = unsafeDescription, ["ReturnBoardPublicId"] = "board-a",
+        ["__RequestVerificationToken"] = token }));
+    var errorMarkup = await post.Content.ReadAsStringAsync();
+    Require(post.IsSuccessStatusCode && boards.CreateCalls == 0
+        && errorMarkup.Contains("id=\"create-board-dialog\"") && errorMarkup.Contains("data-dialog-auto-open=\"true\"")
+        && errorMarkup.Contains("value=\"" + longName + "\"") && errorMarkup.Contains("BoardNameValidation")
+        && errorMarkup.Contains("BoardDescriptionValidation") && !errorMarkup.Contains(unsafeDescription),
+        "real POST returns escaped original draft and validation in auto-opening create dialog");
+    Require(!post.Headers.Contains("Set-Cookie") || !post.Headers.GetValues("Set-Cookie")
+        .Any(value => value.StartsWith("taskflow_board_owner_")), "invalid HTTP post never issues owner cookie");
+    Pass("real antiforgery-protected HTTP create validates lowercase fields, renders the shared partial and escapes draft text");
+    var withoutToken = await http.PostAsync(address + "/boards/create",
+        new FormUrlEncodedContent(new Dictionary<string, string> { ["name"] = "Valid" }));
+    Require(withoutToken.StatusCode == System.Net.HttpStatusCode.BadRequest && boards.CreateCalls == 0,
+        "creation must remain antiforgery protected");
+    Pass("real board creation still rejects requests without antiforgery tokens");
+    boards.HideNavigation = true;
+    var standalone = await http.PostAsync(address + "/boards/create", new FormUrlEncodedContent(new Dictionary<string, string> {
+        ["name"] = longName, ["description"] = "Keep standalone draft", ["__RequestVerificationToken"] = token }));
+    var standaloneMarkup = await standalone.Content.ReadAsStringAsync();
+    Require(standalone.IsSuccessStatusCode && standaloneMarkup.Contains("board-create-page")
+        && standaloneMarkup.Contains(longName) && standaloneMarkup.Contains("Keep standalone draft")
+        && boards.CreateCalls == 0, "standalone validation view also renders through real Razor");
+    boards.HideNavigation = false;
+    Pass("real standalone creation validation view renders without any existing board or seed");
+}
+
 async Task Changed(Func<Task<IActionResult>> action, string name)
 {
     tasks.Saved = boards.Saved = false;
@@ -427,14 +600,32 @@ sealed class FakeBoards(FakeGuests guests) : IBoardService
     public Guid ColumnId { get; } = Guid.NewGuid();
     public bool Saved { get; set; }
     public bool ThrowConflict { get; set; }
+    public bool AllowCreate { get; set; }
+    public bool ThrowCreateArgument { get; set; }
+    public bool HideNavigation { get; set; }
+    public int CreateCalls { get; set; }
+    public CreateBoardRequestModel? LastCreatedRequest { get; set; }
+    public string? LastReadBoardPublicId { get; set; }
     public Task<BoardModel?> GetPreviewAsync(string publicId, CancellationToken cancellationToken = default) =>
         Task.FromResult<BoardModel?>(publicId is "board-a" or "board-b" ? Metadata(publicId) : null);
-    public Task<CreatedBoardModel> CreateAsync(CreateBoardRequestModel request, CancellationToken cancellationToken = default) => throw new Exception("Must not seed a board");
+    public Task<CreatedBoardModel> CreateAsync(CreateBoardRequestModel request, CancellationToken cancellationToken = default)
+    {
+        CreateCalls++;
+        if (!AllowCreate) throw new Exception("Must not seed a board");
+        if (ThrowCreateArgument) throw new ArgumentException("Invalid board details");
+        Saved = true;
+        LastCreatedRequest = request;
+        return Task.FromResult(new CreatedBoardModel(Metadata("created-board"), "created-owner"));
+    }
     public Task<IReadOnlyList<BoardNavigationModel>> GetListBySessionIdAsync(Guid guestId, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<BoardNavigationModel>>([new(Guid.NewGuid(), guestId == guests.Other ? "board-b" : "board-a", "Test")]);
-    public Task<BoardResponseModel?> GetAsync(string publicId, Guid guestId, CancellationToken cancellationToken = default) =>
-        Task.FromResult<BoardResponseModel?>(new(Metadata(publicId), [], [new(ColumnId, "Backlog", "backlog", 1)],
-            [new(publicId == "board-a" ? TaskId : OtherTaskId, ColumnId, "Task", null, TaskPriority.Low, 1, null, Guid.NewGuid(), null, null, new byte[8])]));
+        Task.FromResult<IReadOnlyList<BoardNavigationModel>>(HideNavigation ? [] : [new(Guid.NewGuid(), guestId == guests.Other ? "board-b" : "board-a", "Test")]);
+    public Task<BoardResponseModel?> GetAsync(string publicId, Guid guestId, CancellationToken cancellationToken = default)
+    {
+        LastReadBoardPublicId = publicId;
+        return Task.FromResult<BoardResponseModel?>(new(Metadata(publicId), [], [new(ColumnId, "Backlog", "backlog", 1)],
+            [new(publicId == "board-a" ? TaskId : OtherTaskId, ColumnId, "Task", null, TaskPriority.Low, 1, null, Guid.NewGuid(),
+                new DateOnly(2026, 10, 12), new DateOnly(2026, 10, 19), new byte[8])]));
+    }
     public Task<bool> ResetAsync(string publicId, string ownerToken, byte[] rowVersion, CancellationToken cancellationToken = default)
     { if (ThrowConflict) throw new Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException(); Saved = true; return Task.FromResult(true); }
     public Task<BoardModel?> UpdateAsync(string publicId, string ownerToken, UpdateBoardRequestModel request, CancellationToken cancellationToken = default)
